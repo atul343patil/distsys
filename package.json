@@ -1,25 +1,16 @@
 {
-  "name": "ddssdsds",
+  "name": "nanadsds",
   "version": "1.0.0",
-  "description": "abc",
+  "description": "MPI distributed systems Java programs",
   "main": "index.js",
-  "scripts": {
-    "test": "node server.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/atul343patil/distsys.git"
-  },
+  "files": [
+    "MPI"
+  ],
   "keywords": [
-    "ja"
+    "mpi",
+    "java",
+    "distributed-systems"
   ],
   "author": "lh",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/atul343patil/distsys/issues"
-  },
-  "homepage": "https://github.com/atul343patil/distsys#readme",
-  "dependencies": {
-    "ddssdsds": "^1.0.0"
-  }
+  "license": "MIT"
 }
