@@ -1,0 +1,25 @@
+{
+  "name": "ddssdsds",
+  "version": "1.0.0",
+  "description": "abc",
+  "main": "index.js",
+  "scripts": {
+    "test": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/atul343patil/distsys.git"
+  },
+  "keywords": [
+    "ja"
+  ],
+  "author": "lh",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/atul343patil/distsys/issues"
+  },
+  "homepage": "https://github.com/atul343patil/distsys#readme",
+  "dependencies": {
+    "ddssdsds": "^1.0.0"
+  }
+}

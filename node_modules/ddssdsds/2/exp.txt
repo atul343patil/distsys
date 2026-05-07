@@ -1,0 +1,198 @@
+The provided code is **perfectly matching** for the given problem statement. It correctly implements the Java Remote Method Invocation (RMI) architecture, which allows a client on one machine to call a method on a server located on a different machine. While the code does not explicitly create new threads using a `Thread` class, Java RMI is **multi-threaded by design**; it automatically creates a new thread for every incoming client request so the server can handle multiple clients simultaneously.
+
+---
+
+**Problem Statement 1.2: Multiplication Server**
+Implement multi-threaded client/server Process communication using RMI for Multiplication of Numbers on 2 different machines.
+
+---
+
+### 1. Annotated Code with Simple Explanations
+
+#### **File 1: ServerIntf.java (The Interface)**
+This file defines the "contract." It tells both the client and server what methods are available to be called remotely.
+
+```java
+import java.rmi.*; // Import the RMI library to use remote communication features.
+
+// Define an interface that extends 'Remote'. This tells Java this can be called from another machine.
+public interface ServerIntf extends Remote { 
+    
+    // Declare a method for multiplication. 
+    // It takes two numbers (num1, num2) and returns a result.
+    // 'throws RemoteException' is mandatory because network calls can fail.
+    public double Multiplication(double num1, double num2) throws RemoteException; 
+    
+} // End of interface.
+```
+
+#### **File 2: ServerImpl.java (The Implementation)**
+This file contains the actual "brain" or logic of the multiplication.
+
+```java
+import java.rmi.*; // Import RMI library for communication.
+import java.rmi.server.*; // Import server-side RMI classes.
+
+// This class implements the interface we created and extends UnicastRemoteObject.
+// Extending UnicastRemoteObject makes this class a "Remote Object" that can stay exported.
+public class ServerImpl extends UnicastRemoteObject implements ServerIntf {
+
+    // The constructor (runs when the object is created).
+    public ServerImpl() throws RemoteException {
+        super(); // Calls the parent class (UnicastRemoteObject) constructor to set up RMI.
+    }
+
+    // This is the actual logic for multiplication.
+    public double Multiplication(double num1, double num2) throws RemoteException {
+        return num1 * num2; // Multiply the numbers and send the result back to the client.
+    }
+    
+} // End of class.
+```
+
+#### **File 3: Server.java (The Starter)**
+This file starts the server and registers the service so the client can find it.
+
+```java
+import java.rmi.*; // Import RMI library.
+
+public class Server {
+    // The main entry point of the server program.
+    public static void main(String[] args) {
+        try {
+            // 1. Create an instance of the implementation class.
+            ServerImpl obj = new ServerImpl();
+
+            // 2. Give the object a name and register it in the RMI registry.
+            // "rmi://localhost/Server" means: use RMI on this machine, name the service "Server".
+            Naming.rebind("rmi://localhost/Server", obj);
+
+            // 3. Print a message so we know the server is ready.
+            System.out.println("Server has started.");
+            
+        } catch (Exception e) {
+            // If something goes wrong (like a port being blocked), print the error.
+            System.out.println(e);
+        }
+    }
+} // End of class.
+```
+
+#### **File 4: Client.java (The User)**
+This file runs on the second machine. It asks the user for numbers and calls the server.
+
+```java
+import java.rmi.*; // Import RMI library.
+import java.util.Scanner; // Import Scanner to take input from the keyboard.
+
+public class Client {
+    // The main entry point of the client program.
+    public static void main(String[] args) {
+        try {
+            // 1. Create a Scanner object to read user input.
+            Scanner sc = new Scanner(System.in);
+
+            // 2. Ask user for the first number and store it.
+            System.out.println("Enter num1 : ");
+            double num1 = sc.nextDouble();
+
+            // 3. Ask user for the second number and store it.
+            System.out.println("Enter num2 : ");
+            double num2 = sc.nextDouble();
+
+            // 4. Look up the server on the network. 
+            // NOTE: "localhost" must be changed to the Server's IP address if using 2 machines.
+            ServerIntf obj = (ServerIntf) Naming.lookup("rmi://localhost/Server");
+
+            // 5. Call the 'Multiplication' method as if it were local, but it actually runs on the Server.
+            double result = obj.Multiplication(num1, num2);
+
+            // 6. Print the result received from the server.
+            System.out.println("Result = " + result);
+
+        } catch (Exception e) {
+            // If the server isn't running or the IP is wrong, print the error.
+            System.out.println(e);
+        }
+    }
+} // End of class.
+```
+
+---
+
+### 2. Step-by-Step Execution Guide (Linux)
+
+To run this on two different machines, follow these steps exactly.
+
+#### **Preparation: Configuration**
+Before you begin, you must tell the Client where the Server is.
+1.  **Find Server IP:** On the **Server Machine**, open a terminal and type `ifconfig` or `ip addr`. Look for an address like `192.168.1.5`.
+2.  **Edit Client.java:** In the `Client.java` file, change `rmi://localhost/Server` to `rmi://192.168.1.5/Server` (replace with your actual Server IP).
+
+#### **Step 1: Machine 1 (Server)**
+1.  Open a terminal.
+2.  Save the files: `ServerIntf.java`, `ServerImpl.java`, and `Server.java` in one folder.
+3.  **Compile the code:**
+    `javac *.java`
+4.  **Start the RMI Registry:** (This is the background service that manages connections).
+    `rmiregistry &`
+5.  **Run the Server:**
+    `java Server`
+    *Output should be:* `Server has started.`
+
+#### **Step 2: Machine 2 (Client)**
+1.  Open a terminal.
+2.  Save the files: `ServerIntf.java` and `Client.java` in one folder. (Note: The Client only needs the interface, not the implementation).
+3.  **Compile the code:**
+    `javac *.java`
+4.  **Run the Client:**
+    `java Client`
+5.  **Interact:**
+    * Enter num1: 10
+    * Enter num2: 5
+    * *Expected Output:* `Result = 50.0`
+
+---
+
+### 3. Important Things to Take Care of on Linux
+
+* **File Naming:** Linux is case-sensitive. `Server.java` is different from `server.java`. The filename **must** exactly match the `public class` name inside the file.
+* **Checking Java:** Type `java -version` and `javac -version` to ensure Java is installed.
+* **The Registry (rmiregistry):** If you get an error saying "Connection Refused," it usually means you forgot to run `rmiregistry &` or you started it in the wrong directory. Always start it from the folder where your `.class` files are.
+* **Cleaning up Registry:** If you need to restart the registry, you might need to kill the old one using `pkill rmiregistry`.
+* **Firewall:** Linux machines in labs sometimes have firewalls that block RMI (Port 1099). You can temporarily disable it (if you have sudo rights) using `sudo ufw disable`.
+* **IP Address:** Ensure both machines are on the same local network (Wi-Fi or Ethernet). If they can't "ping" each other (`ping [IP_ADDRESS]`), RMI won't work.
+
+---
+
+### 4. Concepts and Theory (Viva/Examiner Questions)
+
+
+**1. RMI (Remote Method Invocation)**
+* **What it is:** A Java technology that allows an object on one machine to call a method of an object on another machine.
+* **Purpose:** To build distributed applications where different parts of the program run on different computers.
+* **In this practical:** It is the core technology used to send the two numbers to the Server and get the result back.
+
+**2. Client-Server Architecture**
+* **What it is:** A model where one program (Client) requests a service and another program (Server) provides it.
+* **In this practical:** `Client.java` is the requester; `Server.java` is the provider.
+
+**3. Stub and Skeleton**
+* **What they are:** These are "proxy" objects. The **Stub** stays on the Client side and pretends to be the Server. The **Skeleton** (in older Java versions) stays on the Server side to pass calls to the actual object.
+* **Purpose:** They handle the complex task of "Marshalling" (converting data into a format that can be sent over the network).
+
+**4. rmiregistry**
+* **What it is:** A simple directory service (like a phonebook).
+* **Purpose:** The Server registers its name here (`Naming.rebind`). The Client looks up the name here (`Naming.lookup`) to find out where the Server is actually located.
+
+**5. Multi-threading**
+* **What it is:** Doing multiple tasks at the same time.
+* **How it works here:** Java RMI is inherently multi-threaded. If five different clients call the `Multiplication` method at the exact same time, the RMI system will automatically start five separate threads on the server to handle them simultaneously.
+
+**6. Interface**
+* **What it is:** A list of methods without their actual code.
+* **Purpose:** It acts as a bridge. Both the Client and Server must agree on what methods exist. By implementing `ServerIntf`, the Server promises to provide the `Multiplication` method.
+
+---
+**Expert Guide:**
+Since you are preparing for a practical exam, would you like me to explain how to handle common RMI error messages you might see in the terminal?

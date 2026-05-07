@@ -1,0 +1,200 @@
+The code provided is a **perfect match** for the problem statement. [cite_start]It implements the Berkeley algorithm where a central server (the daemon) collects time from multiple clients, calculates an average time, and sends back the necessary adjustments to synchronize all clocks[cite: 1, 2].
+
+**Important Note:** Although you mentioned having zero knowledge of **Java**, the code you provided is actually written in **Python**. Python is much easier to read and run than Java, so this will be very simple for you to execute in the lab.
+
+---
+
+### **0. Problem Statement**
+19 4.2 Implement clock synchronization with Berkeley algorithm with time daemon 
+server using two physical machines.
+
+---
+
+### **1. ADD COMMENTS TO THE CODE**
+
+#### **File: server.py**
+```python
+# Import the socket library to handle network connections
+import socket
+# Import the time library to get the current system time
+import time
+# Import datetime to format the time into a readable format (HH:MM:SS)
+from datetime import datetime
+
+# Define the connection settings. Empty HOST means it listens on all available network paths.
+HOST, PORT = '', 9999
+
+# Create a new socket object (think of this as creating a 'network phone')
+s = socket.socket()
+# Bind the socket to the port 9999 so it knows where to listen for calls
+s.bind((HOST, PORT))
+# Start listening for incoming connections from clients (allow up to 10 in queue)
+s.listen(10)
+
+# Ask the user how many clients they plan to connect for synchronization
+num = int(input("Enter number of clients: "))
+# Wait and accept connections one by one until we have the required number of clients
+# s.accept() returns a connection object for each client
+clients = [s.accept()[0] for _ in range(num)]
+
+# Start an infinite loop so the server keeps synchronizing the time forever
+while True:
+    # Create an empty list to store the time values received from all clients
+    times = []
+
+    # Loop through each connected client to ask for their current time
+    for c in clients:
+        # Receive the time data (1024 bytes), decode it from bytes to text, and convert to a number
+        times.append(float(c.recv(1024).decode()))
+
+    # Get the server's own current system time
+    server_time = time.time()
+
+    # Calculate the average time (Berkeley Logic): 
+    # (Sum of all client times + server time) / (Number of clients + 1 for server)
+    avg = (sum(times) + server_time) / (len(times) + 1)
+
+    # Print the times collected from each client for the examiner to see
+    for i, t in enumerate(times):
+        print(f"Client {i+1} Time:", datetime.fromtimestamp(t).strftime('%H:%M:%S'))
+
+    # Print the server's time and the newly calculated average time
+    print("Server Time:", datetime.fromtimestamp(server_time).strftime('%H:%M:%S'))
+    print("Average Time:", datetime.fromtimestamp(avg).strftime('%H:%M:%S'))
+    # Print a blank line for better readability in the terminal
+    print("\n")
+
+    # Send the 'adjustment' value to each client
+    # The adjustment is: (Average Time - That specific Client's Time)
+    for i, c in enumerate(clients):
+        # Convert the adjustment number to text, then to bytes, and send it over the network
+        c.send(str(avg - times[i]).encode())
+# The loop ends here and starts over for the next synchronization cycle
+```
+
+#### **File: client.py**
+```python
+# Import the socket library for networking
+import socket
+# Import time for delays and random for simulating clock drift
+import time
+import random
+# Import datetime to print the time in a pretty format
+from datetime import datetime
+
+# Ask the user for the IP address of the Server machine
+HOST = input("Enter server IP: ")
+# The port must match the server's port (9999)
+PORT = 9999
+
+# Create a new socket object (the client's 'network phone')
+c = socket.socket()
+# Attempt to connect to the server using the provided IP and Port
+c.connect((HOST, PORT))
+
+# Start an infinite loop to stay synchronized with the server
+while True:
+    # Simulate a 'wrong' clock by taking the real time and adding/subtracting 
+    # a random number of seconds (between -5 and 5)
+    local = time.time() + random.uniform(-5, 5)
+
+    # Convert our 'local' time to text and send it to the server
+    c.send(str(local).encode())
+
+    # Wait to receive the adjustment value (the difference) from the server
+    # Receive data, decode it, and convert it back into a decimal number
+    diff = float(c.recv(1024).decode())
+
+    # Apply the adjustment to our local time to sync with the average
+    new = local + diff
+
+    # Print the 'wrong' local time and the new 'synchronized' time
+    print("Local Time:", datetime.fromtimestamp(local).strftime('%H:%M:%S'))
+    print("Adjusted Time:", datetime.fromtimestamp(new).strftime('%H:%M:%S'))
+    # Print a blank line for clarity
+    print("\n")
+
+    # Wait for 5 seconds before the next synchronization attempt
+    time.sleep(5)
+# End of loop
+```
+
+---
+
+### **2. STEP-BY-STEP EXECUTION GUIDE**
+
+
+#### **Scenario A: Running on a Single Machine (For Testing)**
+1.  **Save the files:** Save the server code as `server.py` and the client code as `client.py` in the same folder.
+2.  **Open Terminal 1 (The Server):**
+    * Type: `python3 server.py`
+    * When prompted "Enter number of clients:", type `1` and press Enter.
+3.  **Open Terminal 2 (The Client):**
+    * Type: `python3 client.py`
+    * When prompted "Enter server IP:", type `127.0.0.1` (this is the universal code for "this computer").
+4.  **Verify:** You will see the server printing the client time and the client printing its adjusted time.
+
+---
+
+#### **Scenario B: Running on Two Different Machines**
+Identify **Machine 1** as the **Server** and **Machine 2** as the **Client**.
+
+**On Machine 1 (Server):**
+1.  Find your IP address: Type `hostname -I` in the terminal. (Let's assume it is `192.168.1.5`).
+2.  Run the server: `python3 server.py`
+3.  Enter the number of clients: Type `1`.
+4.  The server will now sit and wait for the client to "call" it.
+
+**On Machine 2 (Client):**
+1.  Run the client: `python3 client.py`
+2.  When asked for Server IP, type the IP you found on Machine 1: `192.168.1.5`.
+3.  Press Enter.
+
+**Verification:**
+* The **Server** will display: `Client 1 Time`, `Server Time`, and `Average Time`.
+* The **Client** will display: `Local Time` (the drift) and `Adjusted Time` (the fixed time).
+
+---
+
+### **3. IMPORTANT THINGS TO TAKE CARE OF ON LINUX**
+
+* **Python Version:** Always use `python3` instead of just `java` or `python`. Check installation with `python3 --version`.
+* **IP Address:** If the machines cannot see each other, ensure they are on the same Wi-Fi or Lab LAN. Use `ifconfig` or `ip addr` to double-check the IP.
+* **Firewall:** Linux machines sometimes block ports. If the client refuses to connect, try turning off the firewall temporarily with:
+    `sudo ufw disable`
+* **Port Conflicts:** If you get an "Address already in use" error, it means the server is still running in the background. Kill it by pressing **Ctrl + C** in the terminal or restart the terminal.
+* **File Permissions:** If you get a "Permission Denied" error, run:
+    `chmod +x server.py client.py`
+* **Order of Execution:** **Always start the Server first.** If you start the client first, it will crash because there is no "phone" on the other end to answer the call.
+
+---
+
+### **4. CONCEPTS AND THEORY (For Viva)**
+
+**Clock Synchronization (Berkeley Algorithm)**
+* **What it is:** A method to make sure all computers in a network agree on what time it is.
+* **Why it is used:** In distributed systems, computers need to coordinate. If one computer thinks it is 10:00 and another thinks it is 10:05, tasks like file saving or bank transactions can get corrupted.
+* **How it works here:** 1.  The **Server** (Time Daemon) asks all **Clients** for their time.
+    2.  The Server calculates the **Average** of all these times (including its own).
+    3.  Instead of telling clients "the new time," it tells them **how many seconds to add or subtract** (the adjustment) to reach that average.
+
+**Client-Server Architecture**
+* **What it is:** A setup where one central computer (Server) provides a service and other computers (Clients) use that service.
+* **In this practical:** The Server is the "Master Clock" that manages the synchronization logic.
+
+**Time Daemon**
+* **What it is:** A program that runs in the background specifically to handle time-related tasks.
+* **In this practical:** `server.py` acts as the daemon.
+
+**Sockets**
+* **What it is:** A "plug" or "endpoint" for communication between two programs over a network.
+* **In this practical:** We use `socket.socket()` to create the connection and `send()` / `recv()` to pass the time data back and forth.
+
+**Encoding/Decoding**
+* **What it is:** Computers send data as bytes (0s and 1s). [cite_start]We must "encode" text into bytes to send it and "decode" it back into text when it arrives. [cite: 2]
+* [cite_start]**In this practical:** `str(local).encode()` prepares the time for the network, and `.decode()` reads it on the other side. [cite: 2]
+
+**Average Time Calculation**
+The core math of this practical is:
+$$\text{Average} = \frac{\text{Server Time} + \sum \text{Client Times}}{\text{Total Number of Nodes}}$$
+By moving everyone to the average, the system achieves "internal synchronization."

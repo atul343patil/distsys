@@ -1,0 +1,282 @@
+
+The provided code is **perfectly matching** for the given problem statement. It implements a complete SOAP-based Web Service that takes a numerical value in miles, converts it to kilometers using the mathematical constant **1.60934**, and provides a client application to interact with this service over a network.
+
+---
+
+### **0. Problem Statement 7.4**
+**33 7.4 Create a web service which takes Miles as Input and Display Kilometer as Output and Consume that web service.**
+
+---
+
+### **1. ADD COMMENTS TO THE CODE**
+
+#### **File 1: MilesToKmWS.java (The Service Logic)**
+This file defines the mathematical work the web service will perform. Save this file inside a folder path: `org/me/converter/MilesToKmWS.java`.
+
+```java
+// This line tells Java that this file belongs to the package named org.me.converter.
+// In Java, packages are like folders used to organize your code files.
+package org.me.converter;
+
+// These are 'import' statements. They bring in pre-made tools from the Java library.
+// We need these specific tools to turn a regular Java file into a Web Service.
+import javax.jws.WebService;
+import javax.jws.WebMethod;
+import javax.jws.WebParam;
+
+// The @WebService annotation marks this class as a Web Service.
+// The serviceName is the official name that will be visible to other computers.
+@WebService(serviceName = "MilesToKmWS")
+public class MilesToKmWS {
+    
+    // The @WebMethod annotation makes this specific function available to be called over a network.
+    // The operationName is the name the client will use to trigger this conversion.
+    @WebMethod(operationName = "milesToKilometers")
+    public double milesToKilometers(
+            // The @WebParam names the input variable so the web service knows what to look for in the message.
+            // 'double' is a data type used for numbers with decimals.
+            @WebParam(name = "miles") double miles) {
+        
+        // This is the conversion formula: 1 Mile = 1.60934 Kilometers.
+        // The 'return' keyword sends the calculated answer back to whoever asked for it.
+        return miles * 1.60934;
+        
+    } // This closing brace ends the milesToKilometers function.
+
+} // This closing brace ends the MilesToKmWS class.
+```
+
+#### **File 2: Publisher.java (The Server)**
+This file acts as the host. It "publishes" the service so it can be reached via a web address. Save this file inside a folder path: `org/me/converter/Publisher.java`.
+
+```java
+// This file also belongs to the org.me.converter folder.
+package org.me.converter;
+
+// This tool is used to start the lightweight web server built into Java.
+import javax.xml.ws.Endpoint;
+
+public class Publisher {
+    
+    // The 'main' method is the exact spot where the computer starts running the program.
+    public static void main(String[] args) {
+        
+        // This is the URL (web address) where the service will be hosted.
+        // 'localhost' refers to your own computer, and '8080' is a communication port.
+        String url = "http://localhost:8080/ws/converter";
+        
+        // This prints a status message to the terminal so the student knows what is happening.
+        System.out.println("Starting Converter Web Service at: " + url);
+        
+        // This command actually starts the service.
+        // It connects the URL address to the logic we wrote in the MilesToKmWS file.
+        Endpoint.publish(url, new MilesToKmWS());
+        
+        // This message confirms the server is active.
+        System.out.println("Server is running! Do not close this terminal.");
+        
+    } // This ends the main method.
+
+} // This ends the Publisher class.
+```
+
+#### **File 3: MilesToKmClient.java (The Consumer)**
+This program is the user interface. It asks for input and talks to the server. Save this file in your main folder as: `MilesToKmClient.java`.
+
+```java
+// These imports bring in 'Stubs' (middle-man files) that we will generate later.
+// They allow this client program to talk to the remote server easily.
+import org.me.converter.MilesToKmWS;
+import org.me.converter.MilesToKmWS_Service;
+
+// This tool allows the program to read what the user types on the keyboard.
+import java.util.Scanner;
+
+public class MilesToKmClient {
+    
+    // Execution starts here.
+    public static void main(String[] args) {
+        
+        // We use a 'try' block to handle potential errors (like the server being offline).
+        try {
+            
+            // These two lines create the connection to the Web Service.
+            // Think of 'service' as the phone line and 'port' as the person on the other end.
+            MilesToKmWS_Service service = new MilesToKmWS_Service();
+            MilesToKmWS port = service.getMilesToKmWSPort();
+            
+            // This creates the tool to read your keyboard input.
+            Scanner scanner = new Scanner(System.in);
+            
+            // This displays a message to the user asking for the distance.
+            System.out.print("Enter distance in Miles: ");
+            
+            // This line waits for the user to type a number and hit Enter.
+            double miles = scanner.nextDouble();
+            
+            // This line sends the number to the server, waits for the conversion, and stores the result in 'km'.
+            double km = port.milesToKilometers(miles);
+            
+            // This prints the final answer received from the web service.
+            System.out.println("Web Service Response: " + miles + " Miles is equal to " + km + " Kilometers.");
+            
+            // This closes the keyboard reader tool.
+            scanner.close();
+            
+        } catch (Exception e) {
+            
+            // If anything goes wrong, this will print the error details.
+            e.printStackTrace();
+            
+        } // This ends the error-handling block.
+        
+    } // This ends the main method.
+
+} // This ends the MilesToKmClient class.
+```
+
+---
+
+### **2. STEP-BY-STEP EXECUTION GUIDE (For Linux Lab Machines)**
+
+#### **Scenario A: Single Machine Execution**
+
+1.  **Create the Directory Structure**:
+    Open a terminal and create the folders required for the package:
+    `mkdir -p org/me/converter`
+2.  **Save the Files**:
+    * Save `MilesToKmWS.java` in `org/me/converter/`
+    * Save `Publisher.java` in `org/me/converter/`
+    * Save `MilesToKmClient.java` in the main folder (where the `org` folder is located).
+3.  **Compile the Server Files**:
+    `javac org/me/converter/MilesToKmWS.java org/me/converter/Publisher.java`
+4.  **Start the Server**:
+    `java org.me.converter.Publisher`
+    *(Keep this terminal open! Do not close it.)*
+5.  **Generate Client Stubs (Open a NEW Terminal)**:
+    In a new terminal window, navigate to the same main folder and run:
+    `wsimport -keep -p org.me.converter http://localhost:8080/ws/converter?wsdl`
+6.  **Compile the Client**:
+    `javac MilesToKmClient.java`
+7.  **Run the Client**:
+    `java MilesToKmClient`
+
+---
+
+#### **Scenario B: Two Machine Execution**
+
+**Machine 1 (The Server - IP Address: 192.168.1.10)**
+1.  **Find IP**: Type `hostname -I` in the terminal to find your IP.
+2.  **Edit Code**: In `Publisher.java`, change `localhost` to your IP (`192.168.1.10`).
+3.  **Compile & Run**:
+    `javac org/me/converter/MilesToKmWS.java org/me/converter/Publisher.java`
+    `java org.me.converter.Publisher`
+
+**Machine 2 (The Client)**
+1.  **Generate Stubs**: Point the command to Machine 1's IP:
+    `wsimport -keep -p org.me.converter http://192.168.1.10:8080/ws/converter?wsdl`
+2.  **Compile & Run**:
+    `javac MilesToKmClient.java`
+    `java MilesToKmClient`
+
+---
+
+### **3. IMPORTANT THINGS TO TAKE CARE OF ON LINUX**
+
+* **Case Sensitivity**: Linux is case-sensitive. `milesToKmClient.java` is **not** the same as `MilesToKmClient.java`. Ensure filenames match the class names exactly.
+* **Checking Java Tools**: Verify your tools are installed by typing `java -version`, `javac -version`, and `wsimport -version`.
+* **IP Address**: Use `hostname -I` to find your IP address if working on two machines.
+* **Port Conflicts**: If the terminal says "Address already in use," it means port 8080 is busy. Change `8080` to another number (like `8081`) in both `Publisher.java` and the `wsimport` command.
+* **Firewall**: If Machine 2 cannot connect to Machine 1, the firewall might be blocking port 8080. You may need to disable it with `sudo ufw disable` or allow the port.
+* **WSDL Generation**: The `wsimport` command is critical. It creates the actual Java files the client needs to talk to the server. If this step fails, the client won't compile.
+
+---
+
+### **4. CONCEPTS AND THEORY (For Viva/Examiner Questions)**
+
+
+* **Web Service (SOAP)**:
+    * **What it is**: A technology that allows different computers to talk to each other using XML messages over the internet.
+    * **Purpose**: To make functions (like our mile-to-km conversion) available to any other computer regardless of what operating system it uses.
+    * **In this practical**: Our conversion logic is the service, and it's being "served" over HTTP.
+* **Client-Server Architecture**:
+    * **What it is**: A system where one computer (the Server) provides a resource or service, and another computer (the Client) requests and uses that service.
+    * **In this practical**: `Publisher.java` starts the server, and `MilesToKmClient.java` acts as the client.
+* **WSDL (Web Services Description Language)**:
+    * **What it is**: An XML file that acts as an "instruction manual" for the web service.
+    * **Purpose**: It tells the client what methods are available (e.g., `milesToKilometers`) and what types of data are needed.
+    * **In this practical**: When you run the publisher, it creates this file automatically at the URL ending in `?wsdl`.
+* **SOAP (Simple Object Access Protocol)**:
+    * **What it is**: The "language" or protocol used to format the messages sent between the client and server.
+    * **Purpose**: It ensures both sides understand the data being sent.
+* **Endpoint**:
+    * **What it is**: The specific web address (URL) where the web service is living.
+    * **In this practical**: `http://localhost:8080/ws/converter` is our endpoint.
+* **Stub (Proxy)**:
+    * **What it is**: These are the helper files created by the `wsimport` command.
+    * **Purpose**: They handle the complex task of turning your Java request into an XML message and sending it over the network so you don't have to write that code yourself.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Step-by-Step Execution (Same for ALL 5 Practicals)
+I will show the steps for 7.1. For 7.2–7.5 just replace folder name, package name, and port number.
+
+Step 1 — Create folder and save files
+For 7.1, your folder must look exactly like this:
+C:\WebServices\Assignment7.1\
+    src\
+        org\
+            me\
+                calculator\
+                    CalculatorWS.java
+                    Publisher.java
+    CalculatorClient.java
+
+Step 2 — Open Command Prompt and go to folder
+cd C:\WebServices\Assignment7.1
+
+Step 3 — Compile the service files
+javac -d . src\org\me\calculator\CalculatorWS.java src\org\me\calculator\Publisher.java
+This creates the compiled .class files inside org\me\calculator\ folder.
+
+Step 4 — Start the Publisher (Terminal 1 — keep this open)
+java org.me.calculator.Publisher
+You should see:
+Starting Calculator Web Service at: http://localhost:8080/ws/calculator
+Server is running! Do not close this terminal.
+WSDL available at: http://localhost:8080/ws/calculator?wsdl
+Verify it works by opening browser and visiting:
+http://localhost:8080/ws/calculator?wsdl
+You should see an XML page — that means the service is running.
+
+Step 5 — Run wsimport to generate stub (Terminal 2 — new window)
+cd C:\WebServices\Assignment7.1
+wsimport -keep -s . http://localhost:8080/ws/calculator?wsdl
+This auto-generates the CalculatorWS_Service.java and related files inside org\me\calculator\ folder. These are needed by the client.
+
+Step 6 — Compile the client (Terminal 3 — new window)
+javac -cp . CalculatorClient.java
+
+Step 7 — Run the client
+java -cp . CalculatorClient
+
+
+You will see:
+Enter first number: 15
+Enter second number: 4
+Choose operation: 1-Add  2-Subtract  3-Multiply  4-Divide
+Enter choice: 1
+Web Service Response: Addition of 15.0 and 4.0 = 19.0

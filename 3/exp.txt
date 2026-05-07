@@ -1,0 +1,229 @@
+Yes, the code you provided is **perfectly matching** for the given problem statement. It correctly defines a remote interface for division, implements the logic with a safety check for division by zero, and sets up a server that registers itself so a client can call it from a different machine.
+
+---
+
+### 0. Problem Statement
+**3 1.3) Division Server: Implement multi-threaded client/server Process communication using RMI for Division of Numbers on 2 different machines.**
+
+---
+
+### 1. ADD COMMENTS TO THE CODE
+
+#### **File 1: ServerIntf.java**
+This file acts as a "contract" or "menu" that tells both the client and the server which functions are available.
+
+```java
+// Import the Remote Method Invocation library to allow network communication
+import java.rmi.*;
+
+// Define an interface called ServerIntf that extends the 'Remote' class
+// This tells Java that the methods inside this file can be called from another computer
+public interface ServerIntf extends Remote {
+    
+    // Declare a method named 'Division' that takes two decimal numbers (num1 and num2)
+    // It returns a 'double' (a decimal number) as the result
+    // 'throws RemoteException' is required because network calls might fail
+    public double Division(double num1, double num2) throws RemoteException;
+    
+} // End of the interface declaration
+```
+
+#### **File 2: ServerImpl.java**
+This is the "brain" of the operation where the actual division math happens.
+
+```java
+// Import the RMI library for communication
+import java.rmi.*;
+// Import the RMI server library to allow this object to live on a network
+import java.rmi.server.*;
+
+// This class 'ServerImpl' implements the 'ServerIntf' menu we created earlier
+// It extends 'UnicastRemoteObject' to make it a reachable object over the network
+public class ServerImpl extends UnicastRemoteObject implements ServerIntf {
+
+    // This is the constructor; it runs once when the server object is created
+    // It calls 'super()' to set up the internal RMI networking parts
+    public ServerImpl() throws RemoteException {
+        super();
+    }
+
+    // This is the actual logic for the Division method
+    public double Division(double num1, double num2) throws RemoteException {
+        // Check if the user is trying to divide by zero, which is mathematically impossible
+        if(num2 == 0){
+            // Print a message on the server terminal
+            System.out.println("Cannot divide by zero");
+            // Return 0 as a default result to avoid crashing
+            return 0;
+        }
+        // If num2 is not zero, perform the division and send the result back to the client
+        return num1 / num2;
+    }
+    
+} // End of the class
+```
+
+#### **File 3: Server.java**
+This file is the "starter" that turns on the machine and makes the service public.
+
+```java
+// Import general RMI classes
+import java.rmi.*;
+// Import the Registry library to help start the RMI service internally
+import java.rmi.registry.LocateRegistry;
+
+// Define the main Server class
+public class Server {
+    // The main method is where the program execution starts
+    public static void main(String[] args){
+        // 'try' is used to catch any errors that might happen during startup
+        try{
+            // This line starts the RMI registry service on port 1099 automatically
+            // This saves you from having to run 'rmiregistry' manually in the terminal
+            LocateRegistry.createRegistry(1099);
+
+            // Create an instance of the math logic (the brain)
+            ServerImpl obj = new ServerImpl();
+            
+            // Give this service a name ("Server") and register it at the local address
+            // This allows clients to find it using the name "Server"
+            Naming.rebind("rmi://localhost/Server", obj);
+            
+            // Print a message so the user knows the server is ready and waiting
+            System.out.println("Server has started .");
+        }
+        // If an error happens (like the port being blocked), catch it here
+        catch(Exception e){
+            // Print the error details to the screen
+            System.out.println(e);
+        }
+    }
+} // End of the class
+```
+
+#### **File 4: Client.java**
+This file runs on the second machine and asks the server to do the work.
+
+```java
+// Import RMI library for communication
+import java.rmi.*;
+// Import the Scanner library to read user input from the keyboard
+import java.util.Scanner;
+
+// Define the Client class
+public class Client {
+    // The main method where the client program starts
+    public static void main(String[] args) {
+        // 'try' is used to handle network or input errors
+        try {
+            // Create a Scanner object to listen for keyboard input
+            Scanner sc = new Scanner(System.in);
+
+            // Ask the user for the first number
+            System.out.println("Enter num1 : ");
+            // Read the decimal number entered by the user
+            double num1 = sc.nextDouble();
+
+            // Ask the user for the second number
+            System.out.println("Enter num2 : ");
+            // Read the second decimal number
+            double num2 = sc.nextDouble();
+
+            // Look for the "Server" service on the network
+            // Note: "localhost" means "this computer". You will change this for two machines.
+            ServerIntf obj = (ServerIntf) Naming.lookup("rmi://localhost/Server");
+
+            // Call the 'Division' method that actually lives on the Server machine
+            // The result is sent back over the network and stored in 'result'
+            double result = obj.Division(num1, num2);
+
+            // Print the final result to the client's screen
+            System.out.println("Result = " + result);
+
+        } 
+        // Catch any errors (like the server not being found)
+        catch (Exception e) {
+            // Print the error details
+            System.out.println(e);
+        }
+    }
+} // End of the class
+```
+
+---
+
+### 2. STEP-BY-STEP EXECUTION GUIDE (For Linux Lab Machines)
+
+Since you are using two different machines, follow these steps precisely.
+
+#### **Step A: Prepare the Code for Two Machines**
+1.  **Find the Server's IP Address:** On Machine 1 (the Server), open a terminal and type:
+    `ifconfig`
+    Look for an address like `192.168.1.10`.
+2.  **Edit Client.java:** On Machine 2 (the Client), open the `Client.java` file and find this line:
+    `ServerIntf obj = (ServerIntf) Naming.lookup("rmi://localhost/Server");`
+    Change `localhost` to the Server's IP address.
+    *Example:* `ServerIntf obj = (ServerIntf) Naming.lookup("rmi://192.168.1.10/Server");`
+
+#### **Step B: Compile and Run on Machine 1 (Server)**
+1.  Save `ServerIntf.java`, `ServerImpl.java`, and `Server.java` in a folder.
+2.  Open the terminal in that folder.
+3.  **Compile all files:**
+    `javac *.java`
+4.  **Run the Server program:**
+    `java Server`
+    *(Leave this terminal open. It should say "Server has started.")*
+
+#### **Step C: Compile and Run on Machine 2 (Client)**
+1.  Save `ServerIntf.java` and `Client.java` in a folder. (The client only needs the interface to know the "menu").
+2.  Open the terminal in that folder.
+3.  **Compile the files:**
+    `javac *.java`
+4.  **Run the Client program:**
+    `java Client`
+5.  **Enter numbers** when prompted. The result will appear on your screen after the Server calculates it.
+
+---
+
+### 3. IMPORTANT THINGS TO TAKE CARE OF ON LINUX LAB MACHINES
+
+* **File Naming:** In Java, the filename **must** match the class name inside it. For example, `public class Server` must be saved exactly as `Server.java` (case-sensitive).
+* **Case Sensitivity:** Linux treats `Server.java` and `server.java` as two different things. Always use the exact capitalization.
+* **Finding the IP:** If `ifconfig` doesn't work, try `ip addr show`. Look for the "inet" address under `eth0` or `wlan0`.
+* **Firewalls:** Sometimes Linux lab machines block port 1099. If you get a "Connection Refused" error, the firewall might be the cause.
+* **Check Java Installation:** Before starting, type `java -version` and `javac -version`. If they aren't installed, the commands won't work.
+* **Stopping the Server:** To stop the server, press `Ctrl + C` in the terminal.
+* **Common Error (Connection Refused):** This usually means the Server program isn't running or you used the wrong IP address in `Client.java`.
+
+---
+
+### 4. CONCEPTS AND THEORY (For Viva/Examiner Questions)
+
+
+**1. RMI (Remote Method Invocation)**
+* **What it is:** A Java technology that allows an object on one machine to call methods on an object living on a different machine.
+* **Purpose:** To make distributed computing easy. It makes a remote call look exactly like a local function call.
+* **In this practical:** It is the "bridge" that allows the Client machine to send numbers to the Server machine for division.
+
+**2. Client-Server Architecture**
+* **What it is:** A relationship where one computer (Client) requests a service and another (Server) provides it.
+* **In this practical:** The Client asks for division; the Server performs the division.
+
+**3. Multi-threading**
+* **What it is:** The ability of a program to handle multiple tasks at once.
+* **Why it matters here:** RMI is multi-threaded by design. Even though you didn't write "thread" code, the RMI system automatically creates a new thread for every client that connects. This means multiple students could use the same Server at the same time without waiting for each other.
+
+**4. Interface (`ServerIntf`)**
+* **What it is:** A template or "contract."
+* **Purpose:** It ensures both the Client and Server are "speaking the same language" regarding method names and parameters.
+
+**5. Stub and Skeleton**
+* **What they are:** Hidden "gatekeeper" objects. The **Stub** lives on the Client and the **Skeleton** lives on the Server.
+* **How it works:** When the Client calls `Division`, it actually talks to the **Stub**. The Stub packages the numbers and sends them over the internet. The **Skeleton** receives them and gives them to the real Server.
+
+**6. rmiregistry**
+* **What it is:** A naming service (like a phonebook or DNS).
+* **Purpose:** The Server registers its location here. The Client looks here to find out which IP address is hosting the "Server" service.
+* **In this practical:** Your code uses `LocateRegistry.createRegistry(1099)` to start this "phonebook" automatically inside the Server program.
+
+**Expert Guide:** Do you want me to explain the specific "Division by Zero" logic used in your `ServerImpl.java` file in case the examiner asks why you handled it that way?

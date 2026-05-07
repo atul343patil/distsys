@@ -1,0 +1,69 @@
+🔹 1. Multiplication
+Method: Multiplication(double num1, double num2)
+Logic: num1 * num2
+
+🔹 2. Division
+Method: Division(double num1, double num2)
+
+Logic:
+
+if(num2 == 0) → error
+else num1 / num2
+
+🔹 3. Subtraction
+Method: Subtraction(double num1, double num2)
+Logic: num1 - num2
+
+🔹 4. Power (2^n)
+Method: Power(double num)
+Logic: Math.pow(2, num)
+
+🔹 5. Celsius → Fahrenheit
+Method: CtoF(double celsius)
+Logic: (celsius * 9/5) + 32
+
+🔹 6. Miles → Kilometer
+Method: MilesToKm(double miles)
+Logic: miles * 1.609
+
+🔹 7. Echo (Hello + Name)
+Method: Echo(String name)
+Logic: "Hello " + name
+
+🔹 8. Compare Strings
+Method: CompareStrings(String str1, String str2)
+
+Logic:
+
+if(str1.compareTo(str2) > 0) → return str1
+else → return str2
+
+🔹 9. Count Vowels
+Method: CountVowels(String str)
+
+Logic:
+
+count vowels (a,e,i,o,u)
+
+🔹 10. Factorial
+Method: Factorial(int num)
+
+Logic:
+
+fact = 1
+for i=1 to num → fact *= i
+
+🔹 11. Addition (original)
+Method: Addition(double num1, double num2)
+Logic: num1 + num2
+
+
+javac *.java
+rmiregistry
+java Server
+java Client
+
+
+
+
+& "C:\Program Files\Java\jdk-21\bin\rmiregistry.exe"

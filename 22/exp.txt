@@ -1,0 +1,352 @@
+Yes, the provided code is perfectly matching for the given problem statement. It implements a **Token Ring** algorithm where a unique message (the token) is passed from one node to the next in a circle. Only the node holding this token is allowed to enter its "Critical Section" (perform a specific task), which successfully demonstrates **Mutual Exclusion**.
+
+---
+
+### **0. Problem Statement**
+**21 5.1 Implement token ring based mutual exclusion algorithm using 2 physical machines. Ensure that a unique token is shared among the sites. A site is allowed to enter its Critical Section if it possesses the token. Mutual exclusion is ensured because the token is unique.**
+
+---
+
+### **1. ADD COMMENTS TO THE CODE**
+
+#### **File: TokenRingSimulation.java**
+[cite_start]This file acts as a "starter" to test the logic on one computer by running multiple nodes at once using threads[cite: 1].
+
+```java
+// Define a public class named TokenRingSimulation. The file must be named TokenRingSimulation.java.
+public class TokenRingSimulation {
+
+    // The main method is where the computer starts running the program.
+    // 'throws InterruptedException' allows the program to handle pauses/sleeps without crashing.
+    public static void main(String[] args) throws InterruptedException {
+
+        // Print header messages to the console for the user to see.
+        System.out.println("=== Token Ring Mutual Exclusion Simulation ===");
+        System.out.println("Running 3 nodes on a single machine using localhost\n");
+
+        // Set how many times the token should go around the circle.
+        int rounds = 2;
+        // Define three different communication ports, one for each node to listen on.
+        int[] ports = {5000, 5001, 5002};
+        // Use the 'localhost' IP address because we are running everything on one machine here.
+        String ip = "127.0.0.1";
+
+        // Create an array to hold 3 separate threads (one for each virtual computer node).
+        Thread[] threads = new Thread[3];
+
+        // A loop that runs 3 times to set up each node.
+        for (int i = 0; i < 3; i++) {
+            // 'final' variables are needed to pass data into the thread safely.
+            final int nodeId     = i; // The ID number of the node (0, 1, or 2).
+            final int listenPort = ports[i]; // The port where this node waits for messages.
+            // The port of the NEXT node in the circle (Node 0 sends to 1, 1 to 2, 2 to 0).
+            final int nextPort   = ports[(i + 1) % 3];
+            // Only Node 0 starts with the token (true); others start without it (false).
+            final boolean hasToken = (i == 0);
+
+            // Create a new thread to run a Node object.
+            threads[i] = new Thread(() -> {
+                // Initialize the Node with its ID, port, where to send next, and if it has the token.
+                Node node = new Node(nodeId, listenPort, ip, nextPort, hasToken, rounds);
+                // Start the logic defined in the Node class.
+                node.start();
+            });
+
+            // Give the thread a recognizable name for debugging.
+            threads[i].setName("Node-" + i);
+        // End of the for-loop.
+        }
+
+        // Print status and start Node 1 and 2 first so they are ready to receive the token.
+        System.out.println("Starting Node 1 and Node 2 first (they need to listen first)...");
+        threads[1].start(); 
+        // Pause for 0.8 seconds to give the thread time to initialize.
+        Thread.sleep(800);  
+        threads[2].start(); 
+        Thread.sleep(800);  
+
+        // Finally, start Node 0, which holds the token and will begin the process.
+        System.out.println("Starting Node 0 (token holder)...\n");
+        threads[0].start(); 
+
+        // The program waits for all 3 threads to finish their work before moving on.
+        for (Thread t : threads) {
+            t.join();
+        }
+
+        // Print final completion message.
+        System.out.println("\n=== Simulation Complete ===");
+    // End of the main method.
+    }
+// End of the TokenRingSimulation class.
+}
+```
+
+#### **File: Node.java**
+This is the core logic. [cite_start]Each "Node" acts like a separate computer in the network[cite: 2].
+
+```java
+// Import tools for sending/receiving data over a network (sockets) and reading files.
+import java.io.*;
+import java.net.*;
+
+// Define the Node class.
+public class Node {
+
+    // These variables store the node's settings (ID, ports, token status, etc.).
+    private int nodeId;
+    private int listenPort;
+    private String nextNodeIP;
+    private int nextPort;
+    private boolean hasToken;
+    private int rounds;
+
+    // A 'Constructor'—this sets up the node when it is first created.
+    public Node(int nodeId, int listenPort, String nextNodeIP, int nextPort, boolean hasToken, int rounds) {
+        this.nodeId     = nodeId;
+        this.listenPort = listenPort;
+        this.nextNodeIP = nextNodeIP;
+        this.nextPort   = nextPort;
+        this.hasToken   = hasToken;
+        this.rounds     = rounds;
+    // End of constructor.
+    }
+
+    // This method starts the actual behavior of the node.
+    public void start() {
+        // A flag to remember if this specific node was the one to tell everyone to stop.
+        boolean isDoneInitiator = false;
+
+        // If this node starts with the token, it immediately enters the critical section.
+        if (hasToken) {
+            System.out.println("[Node " + nodeId + "] I have the initial token.");
+            enterCriticalSection();
+            // Decrease the count of rounds left.
+            rounds--;
+
+            // If we are finished with all rounds, tell the next node we are "DONE".
+            if (rounds == 0) {
+                System.out.println("[Node " + nodeId + "] All rounds complete. Initiating DONE signal.");
+                isDoneInitiator = true;
+                passSignal("DONE");
+            } else {
+                // Otherwise, pass the "TOKEN" to the next person.
+                passSignal("TOKEN");
+            }
+        // End of the 'if hasToken' block.
+        }
+
+        // A loop that runs forever until a "return" (shutdown) command is reached.
+        while (true) {
+            // Wait to receive a message (either "TOKEN" or "DONE").
+            String received = receiveSignal();
+
+            // Check if the message received is "DONE".
+            if ("DONE".equals(received)) {
+                if (isDoneInitiator) {
+                    // If the "DONE" message came back to the person who started it, everyone has finished.
+                    System.out.println("[Node " + nodeId + "] DONE signal completed the ring. Shutting down gracefully.");
+                    return; // Stop the program.
+                } else {
+                    // If we receive "DONE" but didn't start it, forward it to the next node and then stop.
+                    System.out.println("[Node " + nodeId + "] Received DONE signal. Forwarding and shutting down.");
+                    passSignal("DONE");
+                    return; // Stop the program.
+                }
+            }
+
+            // If the message wasn't "DONE", it must be the "TOKEN".
+            // Enter the critical section to do work.
+            enterCriticalSection();
+            rounds--;
+
+            // Check again if we should stop or pass the token.
+            if (rounds == 0) {
+                System.out.println("[Node " + nodeId + "] All rounds complete. Initiating DONE signal.");
+                isDoneInitiator = true;
+                passSignal("DONE");
+            } else {
+                passSignal("TOKEN");
+            }
+        // End of the while-loop.
+        }
+    // End of the start method.
+    }
+
+    // This method simulates the node doing important, protected work.
+    private void enterCriticalSection() {
+        System.out.println("\n[Node " + nodeId + "] >>> ENTERING Critical Section <<<");
+        System.out.println("[Node " + nodeId + "] Executing critical task...");
+
+        try {
+            // Make the node wait for 2 seconds to simulate doing real work.
+            Thread.sleep(2000); 
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        System.out.println("[Node " + nodeId + "] <<< LEAVING Critical Section >>>\n");
+    // End of the critical section method.
+    }
+
+    // This method sends a network message to the next node.
+    private void passSignal(String signal) {
+        int attempts = 0;
+
+        // Try up to 10 times to connect to the next node in case it isn't ready yet.
+        while (attempts < 10) {
+            try {
+                System.out.println("[Node " + nodeId + "] Sending " + signal + " to " + nextNodeIP + ":" + nextPort);
+
+                // Create a 'Socket' (a connection) to the next node's IP and port.
+                Socket socket = new Socket(nextNodeIP, nextPort);
+                // Create a tool to send data through that connection.
+                ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+                // Write the message ("TOKEN" or "DONE").
+                out.writeObject(signal);
+                // Push the data out and close the connection.
+                out.flush();
+                socket.close();
+
+                System.out.println("[Node " + nodeId + "] " + signal + " sent successfully.");
+                return; // Exit the method once successful.
+
+            } catch (IOException e) {
+                // If the next node isn't listening yet, wait 1 second and try again.
+                attempts++;
+                System.out.println("[Node " + nodeId + "] Next node not ready. Retrying (" + attempts + "/10)...");
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ie) {
+                    ie.printStackTrace();
+                }
+            }
+        }
+        // If we fail 10 times, print an error.
+        System.out.println("[Node " + nodeId + "] ERROR: Could not send signal after 10 attempts.");
+    // End of passSignal method.
+    }
+
+    // This method makes the node wait and listen for an incoming network message.
+    private String receiveSignal() {
+        System.out.println("[Node " + nodeId + "] Waiting for signal on port " + listenPort + "...");
+
+        try {
+            // Create a 'ServerSocket' to wait for incoming calls on our port.
+            ServerSocket serverSocket = new ServerSocket(listenPort);
+            // Accept the incoming connection.
+            Socket socket = serverSocket.accept();
+
+            // Create a tool to read the data being sent to us.
+            ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+            // Read the message and convert it to text (String).
+            String message = (String) in.readObject();
+
+            // Close the connections.
+            socket.close();
+            serverSocket.close();
+
+            System.out.println("[Node " + nodeId + "] Received: " + message);
+            return message;
+
+        } catch (IOException | ClassNotFoundException e) {
+            // If there is a network error, print the details.
+            e.printStackTrace();
+            return "";
+        }
+    // End of receiveSignal method.
+    }
+
+    // This main method allows you to run a single Node from the terminal manually.
+    public static void main(String[] args) {
+        // If the user didn't provide 6 pieces of information, show them how to use it.
+        if (args.length != 6) {
+            System.out.println("Usage: java Node <nodeId> <listenPort> <nextNodeIP> <nextPort> <hasToken(true/false)> <rounds>");
+            return;
+        }
+
+        // Convert the text arguments from the terminal into numbers or booleans.
+        int     nodeId     = Integer.parseInt(args[0]);
+        int     listenPort = Integer.parseInt(args[1]);
+        String  nextNodeIP = args[2];
+        int     nextPort   = Integer.parseInt(args[3]);
+        boolean hasToken   = Boolean.parseBoolean(args[4]);
+        int     rounds     = Integer.parseInt(args[5]);
+
+        // Create the node and start it.
+        Node node = new Node(nodeId, listenPort, nextNodeIP, nextPort, hasToken, rounds);
+        node.start();
+    // End of main method.
+    }
+// End of Node class.
+}
+```
+
+---
+
+### **2. STEP-BY-STEP EXECUTION GUIDE**
+
+
+#### **Scenario A: Single Machine (Simulation)**
+1.  **Save the files:** Save as `TokenRingSimulation.java` and `Node.java` in one folder.
+2.  **Compile:** Open a terminal and type:
+    `javac TokenRingSimulation.java Node.java`
+3.  **Run:** Type:
+    `java TokenRingSimulation`
+4.  **Verify:** You will see logs of Node 0 entering the critical section, then passing the token to Node 1, then Node 2, and finally shutting down.
+
+#### **Scenario B: Two Physical Machines (Real Distribution)**
+Assume **Machine 1 (IP: 192.168.1.10)** and **Machine 2 (IP: 192.168.1.20)**.
+
+**Step 1: Save and Compile**
+* Copy `Node.java` to both machines.
+* On both machines, open a terminal and run: `javac Node.java`
+
+**Step 2: Start Machine 2 (The Receiver)**
+This node waits for the token from Machine 1 and passes it back to Machine 1.
+* Run: `java Node 1 5000 192.168.1.10 5000 false 2`
+    *(Explanation: ID=1, ListenPort=5000, Send to Machine 1, SendPort=5000, Starts without token, 2 rounds)*
+
+**Step 3: Start Machine 1 (The Token Holder)**
+* Run: `java Node 0 5000 192.168.1.20 5000 true 2`
+    *(Explanation: ID=0, ListenPort=5000, Send to Machine 2, SendPort=5000, Starts WITH token, 2 rounds)*
+
+**Step 4: Verify**
+* **Machine 1** will enter the Critical Section, then send the token to **Machine 2**.
+* **Machine 2** will enter the Critical Section, then send the token back to **Machine 1**.
+
+---
+
+### **3. IMPORTANT THINGS TO TAKE CARE OF ON LINUX**
+
+* **File Naming:** Ensure `Node.java` is capitalized exactly like that. Linux is case-sensitive.
+* **Checking Java:** Type `java -version` and `javac -version`. If not installed, use `sudo apt install default-jdk`.
+* **Firewall:** Linux firewalls often block ports like 5000. Disable it temporarily for the lab: `sudo ufw disable`.
+* **Find IP:** Use the command `hostname -I` or `ifconfig` to find your machine's IP address.
+* **Port Selection:** Use ports above 1024 (like 5000 or 8080). Ports below 1024 require "root" (admin) permissions.
+* **Stuck Ports:** If you get "Address already in use," it means a previous run didn't close properly. Find the process and kill it: `ps -ef | grep java` then `kill -9 <PID>`.
+
+---
+
+### **4. CONCEPTS AND THEORY**
+
+**Token Ring Algorithm**
+* **What it is:** A network configuration where nodes are connected in a circular loop.
+* **Purpose:** To decide whose "turn" it is to use a shared resource.
+* **How it works here:** A "token" message moves in a circle. You can only do work if you have the token. After finishing, you must pass the token to your neighbor.
+
+**Mutual Exclusion**
+* **What it is:** A rule that ensures only one process can access a specific resource at a time.
+* **Purpose:** To prevent data corruption. If two computers try to write to the same file at the same millisecond, the file breaks.
+* **How it works here:** Because there is only **one** unique token in the entire ring, it is impossible for two nodes to be in the "Critical Section" at the same time.
+
+**Critical Section**
+* **What it is:** The specific part of the code that accesses shared resources (like a database or printer).
+* **How it works here:** In `Node.java`, the `enterCriticalSection()` method represents this "protected" zone.
+
+**Sockets (TCP/IP)**
+* **What it is:** A way for two programs to talk over a network.
+* [cite_start]**How it works here:** `ServerSocket` is used to "listen" for the token, and `Socket` is used to "send" the token to the next machine[cite: 2].
+
+**Distributed Computing Algorithm**
+* **Technology used:** This is a **Distributed Mutual Exclusion Algorithm**. It doesn't use a central coordinator; instead, the nodes coordinate themselves by passing the token in a decentralized way.

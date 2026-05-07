@@ -1,0 +1,256 @@
+Yes, the provided code is a perfect match for the problem statement. It correctly defines an interface in **IDL** (Interface Definition Language), implements the logic in Java, and uses the **ORB** (Object Request Broker) and **Naming Service** to allow a client to call a function on a server—this is the core of "object brokering."
+
+---
+
+### **Problem Statement**
+**3.1 Develop String Reversing distributed application using CORBA to demonstrate object brokering. Perform operations on 2 different machines.**
+
+---
+
+### **1. Annotated Code with Simple Comments**
+
+#### **File: Reverse.idl**
+This file defines the "contract" between the client and server.
+```idl
+// A module is like a folder or package to keep things organized
+module ReverseModule {
+    // An interface defines what actions the server can perform
+    interface Reverse {
+        // This tells CORBA that there is a function called reverse_string
+        // It takes a string as input ('in') and returns a string as output
+        string reverse_string(in string str);
+    // This brace ends the interface definition
+    };
+// This brace ends the module definition
+};
+```
+
+#### **File: ReverseImpl.java**
+This file contains the actual logic for reversing the string.
+```java
+// Import the files generated from the IDL
+import ReverseModule.*;
+
+// This class 'extends' ReversePOA, which means it follows the rules
+// for being a CORBA servant (server-side object)
+class ReverseImpl extends ReversePOA {
+    // This is the actual logic for the reverse_string function
+    public String reverse_string(String str) {
+        // StringBuilder is a tool in Java to manipulate text
+        // .reverse() flips the text, and .toString() converts it back to a standard string
+        return new StringBuilder(str).reverse().toString();
+    }
+// This brace ends the ReverseImpl class
+}
+```
+
+#### **File: ReverseServer.java**
+This file sets up the server and registers the service so the client can find it.
+```java
+// Import necessary CORBA and naming service libraries
+import ReverseModule.*;
+import org.omg.CORBA.*;
+import org.omg.PortableServer.*;
+import org.omg.CosNaming.*;
+import org.omg.CosNaming.NamingContextPackage.*;
+
+class ReverseServer {
+    // The main method is where the program starts running
+    public static void main(String args[]) {
+        try {
+            // 1. Initialize the ORB (The 'Mailman' that delivers messages)
+            ORB orb = ORB.init(args, null);
+
+            // 2. Get a reference to the RootPOA (The manager of server objects)
+            POA rootpoa = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
+            // Activate the manager so it can start handling requests
+            rootpoa.the_POAManager().activate();
+
+            // 3. Create the actual object that does the reversing
+            ReverseImpl obj = new ReverseImpl();
+
+            // 4. Convert the local Java object into a CORBA remote reference
+            org.omg.CORBA.Object ref = rootpoa.servant_to_reference(obj);
+            Reverse href = ReverseHelper.narrow(ref);
+
+            // 5. Get the Naming Service (The 'Phonebook' where we list our service)
+            org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
+            NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
+
+            // 6. Bind (register) our object in the phonebook under the name "Reverse"
+            ncRef.rebind(ncRef.to_name("Reverse"), href);
+
+            // Print a message to let the user know the server is waiting
+            System.out.println("Server ready...");
+
+            // 7. Keep the server running and waiting for client requests
+            orb.run();
+
+        } catch (Exception e) {
+            // If anything goes wrong, print the error message
+            System.out.println("Error: " + e);
+        }
+    // End of main method
+    }
+// End of ReverseServer class
+}
+```
+
+#### **File: ReverseClient.java**
+This file is the user-facing part that sends the string to the server.
+```java
+// Import necessary CORBA and naming service libraries
+import ReverseModule.*;
+import org.omg.CORBA.*;
+import org.omg.CosNaming.*;
+import java.util.Scanner;
+
+class ReverseClient {
+    // The main method is where the client starts
+    public static void main(String args[]) {
+        try {
+            // 1. Initialize the ORB (The client-side 'Mailman')
+            ORB orb = ORB.init(args, null);
+
+            // 2. Find the Naming Service (The 'Phonebook')
+            org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
+            NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
+
+            // 3. Look up the service named "Reverse" in the phonebook
+            // 'narrow' converts the generic object into a Reverse type
+            Reverse obj = ReverseHelper.narrow(ncRef.resolve_str("Reverse"));
+
+            // 4. Get input from the user via the keyboard
+            Scanner sc = new Scanner(System.in);
+            System.out.print("Enter string: ");
+            String input = sc.nextLine();
+
+            // 5. Call the remote function on the server!
+            String result = obj.reverse_string(input);
+
+            // 6. Display the result returned from the server
+            System.out.println("Reversed string: " + result);
+
+        } catch (Exception e) {
+            // If the server isn't found or communication fails, print error
+            System.out.println("Error: " + e);
+        }
+    // End of main method
+    }
+// End of ReverseClient class
+}
+```
+
+---
+
+### **2. Step-by-Step Execution Guide (Linux)**
+
+#### **Scenario A: Running on a Single Machine**
+1.  **Open Terminal** and create a directory: `mkdir corba_lab && cd corba_lab`
+2.  **Save all 4 files** into this folder with the exact names: `Reverse.idl`, `ReverseImpl.java`, `ReverseServer.java`, `ReverseClient.java`.
+3.  **Compile the IDL file** (this generates the CORBA bridge code):
+    `idlj -fall Reverse.idl`
+    *(This creates a folder named `ReverseModule`)*
+4.  **Compile all Java files**:
+    `javac *.java ReverseModule/*.java`
+5.  **Start the Naming Service (the "Phonebook")**:
+    `orbd -ORBInitialPort 1050 &`
+    *(The `&` runs it in the background)*
+6.  **Run the Server**:
+    `java ReverseServer -ORBInitialPort 1050 -ORBInitialHost localhost`
+    *(Wait until it says "Server ready...")*
+7.  **Open a NEW Terminal tab** and run the Client:
+    `java ReverseClient -ORBInitialPort 1050 -ORBInitialHost localhost`
+8.  **Output**: Enter a string (e.g., "hello"), and it should print "olleh".
+
+#### **Scenario B: Running on Two Different Machines**
+Assume **Machine 1** is the Server (IP: `192.168.1.10`) and **Machine 2** is the Client (IP: `192.168.1.20`).
+
+**On Machine 1 (Server Side):**
+1.  Repeat compilation steps (3 & 4) from Scenario A.
+2.  Start the Naming Service:
+    `orbd -ORBInitialPort 1050 -ORBInitialHost 192.168.1.10 &`
+3.  Run the Server:
+    `java ReverseServer -ORBInitialPort 1050 -ORBInitialHost 192.168.1.10`
+
+**On Machine 2 (Client Side):**
+1.  You must have the compiled `.class` files on this machine as well (or copy the whole folder from Machine 1).
+2.  Run the Client, but point it to Machine 1's IP:
+    `java ReverseClient -ORBInitialPort 1050 -ORBInitialHost 192.168.1.10`
+3.  **Output**: The client on Machine 2 will send the string to Machine 1 and get the reversed string back.
+
+---
+
+### **3. Important Things to Take Care of on Linux**
+
+* **Case Sensitivity**: Linux is case-sensitive. `ReverseServer` is different from `reverseserver`. Always match the file name to the `class` name inside the code.
+* **Java Installation**: Check if Java is installed by typing `java -version` and `javac -version`. If not found, use `sudo apt install default-jdk`.
+* **Finding IP Address**: Type `ifconfig` or `ip addr`. Look for `inet` under `eth0` or `wlan0`.
+* **Firewall**: If Machine 2 cannot connect to Machine 1, the Linux firewall might be blocking port 1050. Turn it off for the lab (temporarily) using:
+    `sudo ufw disable`
+* **Cleaning Up**: If you get an error saying "Port already in use," find the `orbd` process and kill it:
+    `ps -ef | grep orbd` then `kill -9 <PID>`
+* **File Permissions**: If you get a "Permission Denied" error, run `chmod +x *` in your directory.
+
+---
+
+### **4. Concepts and Theory (For Viva)**
+
+**CORBA (Common Object Request Broker Architecture)**
+* **What**: A standard that allows software components written in different languages and running on different computers to work together.
+* **Purpose**: To make "Distributed Computing" easy. You can call a function on a remote computer as if it were on your own computer.
+* **In this practical**: It provides the framework for the Client to talk to the Server.
+
+**IDL (Interface Definition Language)**
+* **What**: A neutral language used to define the "rules" (functions and data types) that the client and server must follow.
+* **Purpose**: Since CORBA supports many languages (C++, Java, Python), IDL acts as a common language that everyone understands.
+* **In this practical**: `Reverse.idl` defines the `reverse_string` function.
+
+**ORB (Object Request Broker)**
+* **What**: The "Mailman" or middleware.
+* **Purpose**: It handles the communication between the client and the server. It finds the object, delivers the request, and brings back the result.
+* **In this practical**: `ORB.init()` initializes this communication system.
+
+**Naming Service (Object Brokering)**
+* **What**: A directory service (like a Phonebook or Yellow Pages).
+* **Purpose**: The server registers its "phone number" (object reference) here so the client can find it by name ("Reverse").
+* **In this practical**: `orbd` starts the naming service; `rebind` registers the service, and `resolve_str` looks it up.
+
+**Stubs and Skeletons**
+* **What**: The `idlj` compiler creates these. The **Stub** is on the Client side (the "Proxy"), and the **Skeleton** is on the Server side.
+* **Purpose**: They handle the technical details of converting Java data into a format that can be sent over the network.
+* **In this practical**: They are hidden inside the `ReverseModule` folder.
+
+**Object Brokering**
+* **What**: The process of a third party (the Broker) connecting a client request to a server implementation.
+* **In this practical**: CORBA acts as the broker using the Naming Service to match the Client's request for "Reverse" to the Server's `ReverseImpl` object.         
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+For Execution 
+
+Terminal 1:
+idlj -fall Reverse.idl
+javac .java ReverseModule\.java
+
+Terminal 2:
+tnameserv -ORBInitialPort 1050
+
+Terminal 3:
+java ReverseServer -ORBInitialPort 1050 -ORBInitialHost localhost
+
+Terminal 4:
+java ReverseClient -ORBInitialPort 1050 -ORBInitialHost localhost

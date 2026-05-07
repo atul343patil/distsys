@@ -1,0 +1,212 @@
+The provided code is **perfectly matching** for the given problem statement. It correctly defines an RMI (Remote Method Invocation) setup where a server calculates the power of 2 for a given number, and it includes the necessary registry setup to allow communication between different machines.
+
+---
+
+### 0. Problem Statement
+**5 1.5) Power Calculation: Implement multi-threaded client/server Process communication using RMI for 2’s Power of Given Number on 2 different machines.**
+
+---
+
+### 1. ADD COMMENTS TO THE CODE
+
+#### **File 1: ServerIntf.java**
+This file is the "Interface." It acts like a contract or a menu that tells both the client and the server what functions are available to be used.
+
+```java
+// Import the RMI library so we can use remote communication features
+import java.rmi.*;
+
+// Define an interface named ServerIntf. 
+// It 'extends Remote' to tell Java this can be called from a different computer.
+public interface ServerIntf extends Remote {
+    
+    // This is the blueprint for a method called 'Power'.
+    // It takes a decimal number (double) called 'num' as input.
+    // It returns a decimal number (double) as the result.
+    // 'throws RemoteException' is required because network calls can fail.
+    public double Power(double num) throws RemoteException;
+}
+```
+
+#### **File 2: ServerImpl.java**
+This is the "Implementation." It contains the actual "brain" or logic that performs the math.
+
+```java
+// Import RMI library for general remote functions
+import java.rmi.*;
+// Import RMI server library to allow this class to act as a server object
+import java.rmi.server.*;
+
+// This class 'ServerImpl' implements the 'ServerIntf' menu we created.
+// It 'extends UnicastRemoteObject' so it can stay active and listen for calls.
+public class ServerImpl extends UnicastRemoteObject implements ServerIntf {
+
+    // This is the constructor. It runs when the object is first created.
+    // It calls 'super()' to set up the internal networking parts of RMI.
+    public ServerImpl() throws RemoteException {
+        super();
+    }
+
+    // This is where the actual math happens.
+    // It takes 'num' and calculates 2 raised to the power of that number.
+    public double Power(double num) throws RemoteException {
+        // Math.pow(2, num) is a built-in Java tool to calculate exponents.
+        return Math.pow(2, num);
+    }
+}
+```
+
+#### **File 3: Server.java**
+This is the "Starter" file. It turns on the server and lists its name in the directory so the client can find it.
+
+```java
+// Import general RMI tools
+import java.rmi.*;
+// Import the Registry tool which acts like a phonebook for services
+import java.rmi.registry.LocateRegistry;
+
+public class Server {
+    // The main entry point where the program starts running
+    public static void main(String[] args){
+        // 'try' is used to catch any errors that might happen, like a blocked port
+        try{
+            // This line starts the RMI registry (the phonebook) on port 1099.
+            // 1099 is the standard "waiting room" for RMI services.
+            LocateRegistry.createRegistry(1099);
+
+            // Create an instance of our math logic (the ServerImpl)
+            ServerImpl obj = new ServerImpl();
+            
+            // Give this service a name ("Server") and register it.
+            // "rmi://localhost/Server" means: Register it on this machine as "Server".
+            Naming.rebind("rmi://localhost/Server", obj);
+            
+            // Print a message so the user knows the server is ready
+            System.out.println("Server has started .");
+        }
+        // If an error occurs, the code jumps here
+        catch(Exception e){
+            // Print the error details to the screen
+            System.out.println(e);
+        }
+    }
+}
+```
+
+#### **File 4: Client.java**
+This is the program the user runs. It asks for a number and sends it to the server.
+
+```java
+// Import RMI library for communication
+import java.rmi.*;
+// Import the Scanner tool to read what the user types on the keyboard
+import java.util.Scanner;
+
+public class Client {
+    // The main entry point for the client program
+    public static void main(String[] args) {
+        // 'try' handles potential network connection errors
+        try {
+            // Create a Scanner object to listen for user input
+            Scanner sc = new Scanner(System.in);
+
+            // Ask the user to type a number
+            System.out.println("Enter number : ");
+            // Read the decimal number typed by the user
+            double num = sc.nextDouble();
+
+            // Look up the "Server" in the RMI phonebook.
+            // "localhost" means the server is on the same machine.
+            // For two machines, "localhost" will be replaced by the Server's IP.
+            ServerIntf obj = (ServerIntf) Naming.lookup("rmi://localhost/Server");
+
+            // Call the 'Power' method. This actually runs on the Server machine!
+            // The server sends the result back to this 'result' variable.
+            double result = obj.Power(num);
+
+            // Print the final answer to the client's screen
+            System.out.println("Result = " + result);
+
+        } 
+        // If the server is not running or the IP is wrong, catch the error
+        catch (Exception e) {
+            // Print the error message
+            System.out.println(e);
+        }
+    }
+}
+```
+
+---
+
+### 2. STEP-BY-STEP EXECUTION GUIDE (For Linux Lab Machines)
+
+#### **Scenario 1: Running on a Single Machine (Testing)**
+1.  **Create a folder:** Open your terminal and create a folder named `RMI_Power`.
+2.  **Save files:** Save all 4 files (`ServerIntf.java`, `ServerImpl.java`, `Server.java`, `Client.java`) inside that folder.
+3.  **Compile the code:**
+    ```bash
+    javac *.java
+    ```
+4.  **Start the Server:**
+    ```bash
+    java Server
+    ```
+    *(The terminal should say "Server has started." Leave this terminal open.)*
+5.  **Run the Client:** Open a **new** terminal window, go to the same folder, and type:
+    ```bash
+    java Client
+    ```
+6.  **Input:** Enter a number (e.g., `3`) and see the result (`8.0`).
+
+---
+
+#### **Scenario 2: Running on 2 Different Machines**
+
+**Preparation:**
+* **Find Server IP:** On **Machine 1 (Server)**, type `hostname -I` or `ifconfig` in the terminal. Suppose the IP is `192.168.1.10`.
+* **Modify Client.java:** On **Machine 2 (Client)**, open `Client.java` and change the lookup line:
+    * *Change:* `Naming.lookup("rmi://localhost/Server")`
+    * *To:* `Naming.lookup("rmi://192.168.1.10/Server")`
+
+**Execution Steps:**
+1.  **Machine 1 (Server):**
+    * Keep all 4 files here.
+    * Compile: `javac *.java`
+    * Run: `java Server`
+2.  **Machine 2 (Client):**
+    * You only need `ServerIntf.java` and `Client.java` here.
+    * Compile: `javac *.java`
+    * Run: `java Client`
+3.  **Verify:** Enter a number on Machine 2; the calculation happens on Machine 1, and the result appears on Machine 2.
+
+---
+
+### 3. IMPORTANT THINGS TO TAKE CARE OF ON LINUX
+
+* **File Names:** Linux is case-sensitive. `Server.java` is NOT the same as `server.java`. The filename must match the class name exactly.
+* **IP Address:** Use `hostname -I` to find the IP. Both machines must be on the same network (e.g., same lab Wi-Fi or Ethernet).
+* **Firewalls:** If the client cannot connect, the Linux firewall might be blocking port 1099. You can temporarily disable it with `sudo ufw disable` (ask your lab assistant first).
+* **Cleaning Registry:** If you get an error "Registry already exists," it means a previous run is still active. You can kill it using `pkill -9 java`.
+* **Checking Java:** Type `javac -version` to ensure the Java compiler is installed.
+* **Classpath:** When running on two machines, ensure the `ServerIntf.class` file is present on **both** machines, as the client needs to know the "menu" of functions.
+
+---
+
+### 4. CONCEPTS AND THEORY (For Viva)
+
+
+* **RMI (Remote Method Invocation):** A technology that allows a Java program to call a method on an object located on a different computer as if it were local.
+* **Client-Server Architecture:** A model where the **Server** provides a service (calculating power) and the **Client** requests that service.
+* **Multi-threading:** RMI is multi-threaded by default. Every time a client connects, the RMI system automatically creates a new **Thread** (a separate path of execution) to handle that request. This allows multiple clients to use the server at the same time.
+* **Interface (`ServerIntf`):** A list of methods that the server agrees to provide. The client uses this to know what it is allowed to ask for.
+* **Stub and Skeleton:**
+    * **Stub:** A small piece of code on the **Client** machine that acts as a gateway. It packages the data and sends it over the network.
+    * **Skeleton:** A piece of code on the **Server** machine that receives the data and gives it to the actual implementation.
+* **rmiregistry:** A naming service (like a phonebook). The server registers its name here, and the client looks up that name to find where the server is located.
+* **LocateRegistry.createRegistry(1099):** This specific command in your code starts the RMI directory service programmatically so you don't have to start it manually in the terminal.
+
+---
+
+**Expert Guide:**
+Since you are using `LocateRegistry.createRegistry(1099)`, did you know that if you try to restart your server without closing it properly first, you might get an "Address already in use" error? Would you like to know how to properly handle that in a lab environment?

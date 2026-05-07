@@ -1,0 +1,219 @@
+
+Yes, the provided code is a **perfect match** for the problem statement. It initializes an array on the root process with a size equal to the number of available processors, distributes one element to each processor using a scatter operation, calculates the reciprocal on each processor, and then gathers all results back to the root for display.
+
+---
+
+### 0. Problem Statement 15 2.4
+**Design a distributed application using MPI for computation where root process has an array of elements equal to the size of processors which is divided to the worker processes which calculates the reciprocal and resultant array will be displayed at root.**
+
+---
+
+### 1. Annotated Code
+
+Save this file exactly as: `MPIReciprocal.java`
+
+```java
+// Import the MPJ Express library which allows the program to use MPI (Message Passing Interface) functions
+import mpi.*;
+
+// Define the main class; the name "MPIReciprocal" must exactly match the name of the file
+public class MPIReciprocal {
+    // The main method is where the computer starts running the code
+    // "throws Exception" tells Java to report any errors that happen during the process
+    public static void main(String[] args) throws Exception {
+
+        // Initialize the MPI environment; this is always the first command in an MPI program
+        MPI.Init(args);
+
+        // Get the "Rank" (ID number) of this specific process; 0 is the root/boss
+        int rank = MPI.COMM_WORLD.Rank();
+
+        // Get the "Size" (total number of processes) currently running in the network
+        int size = MPI.COMM_WORLD.Size();
+
+        // Define that each process will receive exactly 1 number from the root
+        int elementProcess = 1;
+
+        // Set the ID of the root process to 0
+        int root = 0;
+
+        // Create an array (a list of numbers) that will hold one value for every process
+        double sendBuffer[] = new double[size];
+
+        // This section only runs on the root process (Processor 0) to set up the data
+        if (rank == root) {
+            // Print a message showing the root is starting the work
+            System.out.println("Root (Processor " + rank + ") initializing array of size " + size + "...");
+
+            // Print the header for the original array display
+            System.out.print("Original Array: [ ");
+            // Use a loop to fill the array with numbers
+            for (int i = 0; i < size; i++) {
+                // Set each value to (i + 1); we use +1 to avoid the number 0.0
+                sendBuffer[i] = (double)(i + 1);
+                // Print the number followed by a space
+                System.out.print(sendBuffer[i] + " ");
+            }
+            // Print the closing bracket and move to a new line
+            System.out.println("]\n");
+        } // End of the root-only initialization section
+
+        // Create a small storage area (buffer) to hold the 1 number this process receives
+        double receiveBuffer[] = new double[elementProcess];
+
+        // The Scatter command takes the big array from the root and gives 1 item to each process
+        // sendBuffer: the full list; receiveBuffer: where this process stores its piece; root: the sender
+        MPI.COMM_WORLD.Scatter(
+            sendBuffer,    0, elementProcess, MPI.DOUBLE, // Sending from root
+            receiveBuffer, 0, elementProcess, MPI.DOUBLE, // Receiving at worker
+            root                                          // ID of the root
+        );
+
+        // Extract the number received from the buffer and store it in a single variable
+        double receivedNumber = receiveBuffer[0];
+
+        // Compute the reciprocal using the formula: $1 / \text{number}$
+        // Example: If the number is $4.0$, the reciprocal is $1.0 / 4.0 = 0.25$
+        double reciprocal = 1.0 / receivedNumber;
+
+        // Print what this specific process received and the math result it calculated
+        System.out.println("Processor " + rank + " received: " + receivedNumber +
+                           "  ->  reciprocal = 1/" + (int)receivedNumber + " = " + reciprocal);
+
+        // Create a small array to store the reciprocal so it can be sent back to the root
+        double localResultArray[] = new double[1];
+        // Put the calculated reciprocal into the array
+        localResultArray[0] = reciprocal;
+
+        // Create a large array on the root process to collect all the reciprocals
+        double gatherBuffer[] = new double[size];
+
+        // The Gather command collects the results from all workers and puts them into the root's list
+        MPI.COMM_WORLD.Gather(
+            localResultArray, 0, elementProcess, MPI.DOUBLE, // Worker sends 1 result
+            gatherBuffer,     0, elementProcess, MPI.DOUBLE, // Root collects into a list
+            root                                             // ID of the receiver
+        );
+
+        // This section only runs on the root process after it has collected all the data
+        if (rank == root) {
+            // Print a message saying the collection is finished
+            System.out.println("\nGathering complete.");
+            // Print the header for the final result list
+            System.out.print("Root (Processor " + rank + ") Final Resultant Array (Reciprocals): [ ");
+            // Loop through the gathered list of reciprocals
+            for (int i = 0; i < size; i++) {
+                // Print each reciprocal formatted to 3 decimal places
+                System.out.printf("%.3f ", gatherBuffer[i]);
+            }
+            // Print the closing bracket
+            System.out.println("]");
+        } // End of the root-only printing section
+
+        // Shut down the MPI environment; this is always the last command in an MPI program
+        MPI.Finalize();
+    } // End of the main method
+} // End of the class
+```
+
+---
+
+### 2. Step-by-Step Execution Guide
+
+#### Case A: Running on a Single Machine
+1.  **Open Terminal**: Navigate to the folder where you saved the file.
+2.  **Compile the Program**: Use the command below (assuming `$MPJ_HOME` is set).
+    ```bash
+    javac -cp $MPJ_HOME/lib/mpj.jar MPIReciprocal.java
+    ```
+3.  **Run the Program**: Run the program with 4 processes.
+    ```bash
+    mpjrun.sh -np 4 MPIReciprocal
+    ```
+4.  **Verification**: You should see Processor 0 through 3 printing their values, followed by the root showing the final array: $[ 1.000, 0.500, 0.333, 0.250 ]$.
+
+#### Case B: Running on Two Machines (Cluster Mode)
+1.  **Prepare IP Addresses**: Find the IP of both machines (e.g., Machine 1: `192.168.1.10`, Machine 2: `192.168.1.11`).
+2.  **Same Directory**: Ensure `MPIReciprocal.class` is in the **exact same folder path** on both computers.
+3.  **Create Machine File**: On Machine 1, create a file named `machines` containing:
+    ```text
+    192.168.1.10
+    192.168.1.11
+    ```
+4.  **Start Daemons**: Run this command on **both** machines to start the MPJ background service:
+    ```bash
+    mpjboot
+    ```
+5.  **Execution (from Machine 1)**:
+    ```bash
+    mpjrun.sh -np 2 -dev niodev -machinesfile machines MPIReciprocal
+    ```
+    *(Note: `-np 2` means 1 process per computer.)*
+6.  **Cleanup**: When finished, run `mpjhalt` on both machines to stop the background service.
+
+---
+
+### 3. Important Things to Take Care of on Linux
+
+* **File Naming**: The file **must** be named `MPIReciprocal.java`. Linux is case-sensitive; if the case doesn't match the class name inside the code, it will fail to compile.
+* **MPJ_HOME Variable**: Ensure your `.bashrc` file has the correct path to the MPJ Express folder. You can check it by typing `echo $MPJ_HOME`.
+* **Network Firewall**: If running on two machines, the firewall may block the connection. If the program "hangs" without output, ask the administrator to run `sudo ufw disable` (on Ubuntu) to test if the firewall is the issue.
+* **IP Address**: Use the command `hostname -I` or `ip addr show` to find your machine's IP address.
+* **SSH Access**: For multiple machines, they usually require SSH access between them without needing a password every time.
+
+---
+
+### 4. Concepts and Theory
+
+#### Message Passing Interface (MPI)
+* **What it is**: A communication protocol and a standard library for parallel computing where multiple processors talk to each other by sending messages.
+* **Purpose**: It allows us to split a heavy mathematical calculation across many computers to get the answer faster.
+* **In this practical**: We use it to run the "Reciprocal" calculation on multiple processes simultaneously.
+
+#### Rank and Size
+* **Rank**: A unique identification number (starting from $0$) given to each process in the MPI network.
+* **Size**: The total number of processes launched for the task.
+* **In this practical**: We use Rank $0$ as the coordinator (Root).
+
+#### Scatter Operation
+* **What it is**: A "one-to-all" communication method.
+* **Purpose**: It takes a large array from one process (the root) and sends equal pieces of it to every other process.
+* **In this practical**: The root takes the list of numbers $[ 1, 2, 3, 4 ]$ and "scatters" them so each processor gets exactly one number.
+
+#### Gather Operation
+* **What it is**: An "all-to-one" communication method.
+* **Purpose**: It collects small pieces of data from many different processes and joins them together into one large array on the root.
+* **In this practical**: After every process calculates its reciprocal, the root "gathers" those results back into a single final list.
+
+#### Reciprocal
+* **Definition**: The reciprocal of a number $x$ is $1/x$. 
+* **In this practical**: Each processor performs the division $1.0 / \text{received\_number}$. Using `double` ensures we get decimal results like $0.25$ instead of integers.
+
+
+
+
+
+
+
+
+
+
+
+
+
+====================================================================================================================
+1. Set MPJ_HOME
+$env:MPJ_HOME="C:\mpj\mpj-v0_44"
+2. Go to Project Folder
+cd C:\MPI\2.1_MPISum
+3. Compile Java File
+javac -cp ".;$env:MPJ_HOME\lib\mpj.jar" MPISum.java
+4. Run MPI Program
+& "$env:MPJ_HOME\bin\mpjrun.bat" -np 4 MPISum
+
+
+
+instead only 3 commands 
+cd C:\MPI\2.1_MPISum
+javac -cp ".;..\mpj\lib\mpj.jar" MPISum.java
+..\mpj\bin\mpjrun.bat -np 4 MPISum

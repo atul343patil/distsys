@@ -1,0 +1,215 @@
+Yes, the provided code **perfectly matches** the problem statement. It utilizes the MPJ Express library (the Java implementation of the Message Passing Interface) to initialize a distributed environment, partition an array from a root process to worker processes using `Scatter`, calculate intermediate sums, and aggregate the results using `Reduce`.
+
+---
+
+## 12 2.1 Problem Statement
+**Design a distributed application using MPI for computation where root process has an array of elements equal to the size of processors and distributed to the worker processes which calculates and displays the intermediate sums calculated at different processors. Perform these operations on 2 different machines.**
+
+---
+
+## 1. Annotated Code (Line-by-Line)
+
+Save this file exactly as: `MPISum.java`
+
+```java
+// Import the MPJ Express library so the program can use MPI functions
+import mpi.*;
+
+// Define the main class; the name must match the filename (MPISum.java)
+public class MPISum {
+    
+    // The main method where the program starts execution
+    public static void main(String[] args) throws Exception {
+
+        // Initialize the MPI environment; this must be the first MPI call
+        // It prepares the system for distributed communication
+        MPI.Init(args);
+
+        // Get the unique ID (Rank) of the current process
+        // Process 0 is usually the "Root" or "Master," others are "Workers"
+        int rank = MPI.COMM_WORLD.Rank();
+
+        // Get the total number of processes running in this execution
+        int size = MPI.COMM_WORLD.Size();
+
+        // Define how many numbers each process will handle
+        int unitsize = 5;
+
+        // Assign the ID 0 as the root process (the boss process)
+        int root = 0;
+
+        // Calculate the total number of elements in the entire array
+        // Total = elements per process multiplied by number of processes
+        int total_elements = unitsize * size;
+
+        // Create an array to hold all the data (the send buffer)
+        int send_buffer[] = new int[total_elements];
+
+        // Only the root process (Rank 0) should fill the array with data
+        if (root == rank) {
+            // Print a message indicating the root is starting
+            System.out.println("Root (Processor " + rank + ") initializing array...");
+
+            // Use a loop to fill the array with numbers starting from 1
+            for (int i = 0; i < total_elements; i++) {
+                send_buffer[i] = i + 1;
+            }
+
+            // Print the full original array to the console for verification
+            System.out.print("Array: [ ");
+            for (int i = 0; i < total_elements; i++) {
+                System.out.print(send_buffer[i] + " ");
+            }
+            System.out.println("]");
+        } // End of root-only initialization
+
+        // Create a smaller array to hold the specific piece of data this process receives
+        int receive_buffer[] = new int[unitsize];
+
+        // Use Scatter to split the big array into chunks and send one chunk to each process
+        // Root sends from send_buffer, everyone receives into their receive_buffer
+        MPI.COMM_WORLD.Scatter(
+            send_buffer,    0, unitsize, MPI.INT,   // Source: array, start, how many, type
+            receive_buffer, 0, unitsize, MPI.INT,   // Destination: array, start, how many, type
+            root                                     // The ID of the process sending the data
+        );
+
+        // Initialize a variable to store the sum of the numbers this process received
+        int local_sum = 0;
+        
+        // Loop through the received chunk and add the numbers together
+        for (int i = 0; i < unitsize; i++) {
+            local_sum += receive_buffer[i];
+        }
+
+        // Print the partial sum calculated by this specific process
+        System.out.println("Processor " + rank + " received chunk and calculated intermediate sum: " + local_sum);
+
+        // MPI functions often require data to be inside an array even if it is just one number
+        int local_sum_arr[] = new int[1];
+        local_sum_arr[0] = local_sum;
+
+        // Create an array to hold the final combined result (only used by the root)
+        int final_sum[] = new int[1];
+
+        // Use Reduce to collect all the local_sum_arr values from every process
+        // It performs a Math operation (MPI.SUM) and stores the result in final_sum at the root
+        MPI.COMM_WORLD.Reduce(
+            local_sum_arr, 0,   // Every process sends its local sum array
+            final_sum,     0,   // The root receives the combined result here
+            1, MPI.INT,         // Sending 1 integer value
+            MPI.SUM,            // The operation: Add everything together
+            root                // The ID of the process collecting the result
+        );
+
+        // Only the root process prints the final total sum of all chunks
+        if (root == rank) {
+            System.out.println("Root (Processor " + rank + ") Final Total Sum: " + final_sum[0]);
+        } // End of root-only print
+
+        // Shut down the MPI environment and clean up resources
+        MPI.Finalize();
+        
+    } // End of main method
+} // End of class
+```
+
+---
+
+## 2. Step-by-Step Execution Guide
+
+### Prerequisites
+1.  **MPJ Express** must be installed and the `MPJ_HOME` environment variable must be set.
+2.  Java (JDK) must be installed.
+
+### Case A: Running on a Single Machine (Multicore mode)
+1.  **Save the file**: Create a file named `MPISum.java` and paste the code above.
+2.  **Open Terminal**: Navigate to the folder containing the file.
+3.  **Compile the code**:
+    ```bash
+    javac -cp $MPJ_HOME/lib/mpj.jar MPISum.java
+    ```
+4.  **Run the code**: (We will use 4 processes as an example)
+    ```bash
+    mpjrun.sh -np 4 MPISum
+    ```
+
+### Case B: Running on Two Machines (Cluster mode)
+1.  **Identify IP Addresses**: Let’s assume:
+    * **Machine 1 (Master):** `192.168.1.10`
+    * **Machine 2 (Worker):** `192.168.1.11`
+2.  **Same Directory**: Ensure the compiled `MPISum.class` file is in the **exact same folder path** on both machines.
+3.  **Create a Machine File**: On Machine 1, create a text file named `machines` and write the IP addresses:
+    ```text
+    192.168.1.10
+    192.168.1.11
+    ```
+4.  **Start Daemons**: On **both** machines, start the MPJ daemon:
+    ```bash
+    mpjboot
+    ```
+5.  **Run from Machine 1**:
+    ```bash
+    mpjrun.sh -np 2 -dev niodev -machinesfile machines MPISum
+    ```
+    *(Note: `-np 2` runs one process per machine.)*
+6.  **Stop Daemons**: Once finished, run `mpjhalt` on both machines.
+
+---
+
+## 3. Important Things to Take Care of (Linux)
+
+* **Case Sensitivity:** Linux is case-sensitive. `MPISum.java` is different from `mpisum.java`. The filename **must** exactly match the class name in the code.
+* **Checking Installations:**
+    * Type `java -version` to check if Java is installed.
+    * Type `echo $MPJ_HOME` to see if the MPI path is set. If blank, you cannot run the program.
+* **IP Address:** Use the command `ip addr` or `ifconfig` to find your machine's IP. Look for the `inet` value under `eth0` or `wlan0`.
+* **Firewall:** In lab environments, the firewall might block MPI communication. If the program hangs, ask the instructor to disable the firewall (`sudo ufw disable` on Ubuntu).
+* **SSH Access:** For two machines, they usually need "Passwordless SSH" configured. If not configured, `mpjrun` might ask for a password multiple times or fail.
+* **Classpaths:** The `-cp $MPJ_HOME/lib/mpj.jar` flag tells Java where the MPI library is. Without this, you will get "Package mpi does not exist" errors.
+
+---
+
+## 4. Concepts and Theory (Viva Prep)
+
+### Message Passing Interface (MPI)
+* **What it is:** A standard protocol used for communication between different nodes (computers) in a parallel computing system.
+* **Purpose:** It allows multiple processors to work together on a single problem by passing messages to each other.
+* **In this practical:** MPI provides the environment where multiple instances of our Java program can talk to each other to sum an array.
+
+### Rank and Size
+* **Rank:** A unique integer ID assigned to each process. It starts at 0. We use it to tell the "Root" (Rank 0) to do special tasks like initializing the array.
+* **Size:** The total number of processes running. If you run with `-np 4`, the size is 4.
+
+### Collective Communication Operations
+
+* **Scatter:**
+    * **What it is:** A "One-to-All" operation.
+    * **Purpose:** It takes a large array from the root and divides it into equal pieces, sending one piece to every process in the network.
+    * **In this practical:** It splits the master array so each processor only has to sum 5 numbers instead of the whole thing.
+* **Reduce:**
+    * **What it is:** An "All-to-One" operation.
+    * **Purpose:** It collects data from all processes and "reduces" it to a single value using a mathematical function (like Sum, Max, or Min).
+    * **In this practical:** It takes the intermediate sums from every processor and adds them together to get the final total sum at the root.
+
+### Distributed Computing
+* **What it is:** A field where components of a software system are shared among multiple computers to improve performance.
+* **Purpose:** To solve large problems faster by breaking them into smaller parts (Parallelism).
+* **Architecture:** This practical uses a **Master-Worker** (or Root-Worker) approach, where one process coordinates the data and others perform the heavy lifting.
+
+====================================================================================================================
+1. Set MPJ_HOME
+$env:MPJ_HOME="C:\mpj\mpj-v0_44"
+2. Go to Project Folder
+cd C:\MPI\2.1_MPISum
+3. Compile Java File
+javac -cp ".;$env:MPJ_HOME\lib\mpj.jar" MPISum.java
+4. Run MPI Program
+& "$env:MPJ_HOME\bin\mpjrun.bat" -np 4 MPISum
+
+
+
+instead only 3 commands 
+cd C:\MPI\2.1_MPISum
+javac -cp ".;..\mpj\lib\mpj.jar" MPISum.java
+..\mpj\bin\mpjrun.bat -np 4 MPISum

@@ -1,0 +1,217 @@
+Yes, the provided code is perfectly matching for the given problem statement. It simulates a **Ring-based Leader Election algorithm** where a message travels around a circle of processes to find the one with the highest ID to become the leader.
+
+---
+
+### **0. Problem Statement**
+**27 6.4 Perform Leader Election using Token Ring Algorithm. Also print the messages exchanged between processes.**
+
+---
+
+### **1. ADD COMMENTS TO THE CODE**
+
+#### **File: TokenRing.java**
+```java
+// This line tells Java to include useful tools like the Scanner (to read user typing) and Arrays.
+import java.util.*;
+
+// This is the main container for our program. The file name must be TokenRing.java.
+public class TokenRing {
+
+    // This is a list of true/false values to remember if a process is UP (true) or DOWN (false).
+    static boolean[] alive;
+    // This variable stores the total number of processes in the system.
+    static int n;
+
+    // This block of code (method) performs the election logic starting from process 'p'.
+    static void election(int p){
+        // Print a message saying which process is starting the election.
+        System.out.println("Election start from process " + p);
+
+        // 'i' is a counter we will use to go around the ring.
+        int i = p;
+        // 'max' will keep track of the highest process ID we have found so far.
+        int max = p;
+
+        // A 'do-while' loop ensures we go around the circle at least once.
+        do {
+            // Check if process 'i' is currently working (UP).
+            if(alive[i]){
+                // Print the message being passed from the starter 'p' to the current process 'i'.
+                System.out.println("(" + p + " -> " + i + ")");
+                // If the current process ID 'i' is higher than our current 'max', update 'max'.
+                if(i > max) max = i;
+            }
+            // Move to the next process in the ring. The '%' ensures that after the last process, we jump back to 0.
+            i = (i + 1) % n;
+        // Stop the loop once we have come back to the process 'p' that started the election.
+        } while(i != p);
+
+        // After completing the circle, print who the winner (highest ID) is.
+        System.out.println("\nCoordinator (Ring Leader) = " + max);
+
+        // Now, the new leader (max) must tell everyone else that they are in charge.
+        i = (max + 1) % n;
+        // Loop around the ring again until we reach the leader.
+        while(i != max){
+            // If the process is working (UP), show the leader sending a message to it.
+            if(alive[i]){
+                System.out.println(max + " -> " + i);
+            }
+            // Move to the next process.
+            i = (i + 1 ) % n;
+        }
+    // This brace marks the end of the election method.
+    }
+
+    // This method prints the current status (UP or DOWN) of every process.
+    static void showStatus() {
+        System.out.print("Status: ");
+        // Loop through every process from 0 to n-1.
+        for (int i = 0; i < n; i++) {
+            // If alive[i] is true, print (UP); otherwise, print (DOWN).
+            System.out.print(i + (alive[i] ? "(UP) " : "(DOWN) "));
+        }
+        // Move to a new line after printing statuses.
+        System.out.println();
+    // End of the showStatus method.
+    }
+
+    // This is the starting point of the program where the menu is displayed.
+    public static void main(String[] args) {
+        // Create a Scanner tool to read what the user types into the terminal.
+        Scanner sc = new Scanner(System.in);
+
+        // Ask the user how many processes they want in their ring.
+        System.out.print("Enter total number of processes: ");
+        n = sc.nextInt();
+
+        // Initialize the 'alive' list based on the number 'n'.
+        alive = new boolean[n];
+        // Set every process to be 'UP' (true) to start with.
+        Arrays.fill(alive, true);
+
+        // This variable will store the user's menu choice.
+        int choice;
+
+        // Print the menu options.
+        System.out.println("\n========= MENU =========");
+        System.out.println("1. UP a process: activate a deactivated Process");
+        System.out.println("2. DOWN a process: Simulate failure of a Process");
+        System.out.println("3. ELECT leader: Starts Token Ring election");
+        System.out.println("4. SHOW STATUS: Displays which processes are UP/DOWN");
+        System.out.println("5. EXIT");
+
+        // Use a loop to keep showing the menu until the user picks '5' to Exit.
+        do {
+            System.out.print("\nEnter your choice: ");
+            choice = sc.nextInt();
+
+            // Perform different actions based on the user's choice.
+            switch (choice) {
+
+                case 1: // If user picks 1, set a specific process to UP.
+                    System.out.print("Process to UP (0-" + (n - 1) + "): ");
+                    alive[sc.nextInt()] = true;
+                    break;
+
+                case 2: // If user picks 2, set a specific process to DOWN.
+                    System.out.print("Process to DOWN (0-" + (n - 1) + "): ");
+                    alive[sc.nextInt()] = false;
+                    break;
+
+                case 3: // If user picks 3, ask which process starts the election.
+                    System.out.print("Start election from process (0-" + (n - 1) + "): ");
+                    int p = sc.nextInt();
+
+                    // If the starter process is DOWN, it cannot start an election.
+                    if (!alive[p]) {
+                        System.out.println("This Process is DOWN");
+                    } else {
+                        // Otherwise, call the election method.
+                        election(p);
+                    }
+                    break;
+
+                case 4: // If user picks 4, show the list of who is UP/DOWN.
+                    showStatus();
+                    break;
+
+                case 5: // If user picks 5, print exit message.
+                    System.out.println("Exit");
+                    break;
+
+                default: // If user types a wrong number.
+                    System.out.println("Invalid choice");
+            }
+
+        // Loop back to the menu as long as 'choice' is not 5.
+        } while (choice != 5);
+    // End of the main method.
+    }
+// End of the TokenRing class.
+}
+```
+
+---
+
+### **2. STEP-BY-STEP EXECUTION GUIDE (For Linux Lab Machines)**
+
+**Important Note:** This code is a **simulation**. It does not use networking code to talk between two physical machines. Instead, it uses an "array" to simulate multiple machines on one screen.
+
+#### **Scenario A: Running on a Single Machine**
+1.  **Open the Terminal** and create a file: `nano TokenRing.java`
+2.  **Paste the code** into the editor, press `Ctrl+O` to save, and `Ctrl+X` to exit.
+3.  **Compile the code**:
+    `javac TokenRing.java`
+4.  **Run the program**:
+    `java TokenRing`
+5.  **Verify successful run**:
+    * Enter total processes: `5`.
+    * Choice `2` (DOWN) and enter `4` (kill the highest process).
+    * Choice `3` (ELECT) and enter `1`.
+    * **Expected Output**: You should see messages moving from 1 to 2 to 3, skipping 4 (because it's down), and announcing `Coordinator = 3`.
+
+#### **Scenario B: Running on Two Different Machines**
+Since this is a logic simulation, you simply run the same program on both machines to demonstrate the theory to the examiner.
+1.  **Machine 1**: Repeat the steps in Scenario A.
+2.  **Machine 2**: Repeat the steps in Scenario A.
+3.  **Interaction**: You can use Machine 1 to show a successful election when all nodes are UP, and use Machine 2 to show what happens when the leader crashes (DOWN).
+
+---
+
+### **3. IMPORTANT THINGS TO TAKE CARE OF ON LINUX**
+
+* **File Naming**: The file **must** be named `TokenRing.java` (capital T and R). Java on Linux will fail to compile if the case is wrong.
+* **Check Java**: Type `javac -version` in the terminal. If it says "command not found," Java is not installed.
+* **Finding IP**: Type `hostname -I` to find the IP, though not strictly required for this simulation.
+* **Port Issues**: This specific simulation doesn't use ports (no sockets), so firewalls won't block it.
+* **Common Error**: If you type a process number higher than the total processes (e.g., you said there are 5 processes but you try to set process 10 to DOWN), the program will crash with an `ArrayIndexOutOfBoundsException`.
+
+---
+
+### **4. CONCEPTS AND THEORY (For Viva)**
+
+**Leader Election**
+* **What it is**: The process of choosing one single process to be the "coordinator" or "boss" of a group.
+* **Why it is used**: In distributed systems, you often need one process to manage shared resources or give tasks to others.
+* **How it works here**: All processes agree that the one with the highest ID number should be the leader.
+
+**Token Ring Election Algorithm**
+* **What it is**: An algorithm where processes are arranged in a logical circle.
+* **How it works here**: 
+    1.  A process notices the leader is gone and starts an **Election**.
+    2.  It sends a message around the ring. Every process it visits adds its ID to the list if it is UP.
+    3.  Once the message returns to the starter, the highest ID found is declared the **Coordinator**.
+    4.  The new leader then sends another message around the ring to tell everyone it is the new boss.
+
+**Ring Topology**
+* **What it is**: A network structure where each computer is connected to exactly two others, forming a circle.
+* **Purpose**: It ensures every message has a clear path to travel until it reaches the destination or returns to the sender.
+
+**Coordinator**
+* **What it is**: The process that wins the election (the one with the highest ID).
+
+**UP/DOWN Status**
+* **What it is**: A simulation of computer health. "UP" means the computer is working; "DOWN" means it has crashed or disconnected.
+
+If you were to start the election from process 0 in a ring of 5 processes where process 4 is DOWN, which process ID do you think would be the final Coordinator?

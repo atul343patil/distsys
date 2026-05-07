@@ -1,0 +1,188 @@
+The code you have provided is **perfectly matching** for the problem statement. It correctly uses Java Remote Method Invocation (RMI) to allow a client to send a distance in miles to a server, which then performs the calculation and returns the result in kilometers. Even though the code does not explicitly create threads, Java RMI is **multi-threaded by design**, meaning the server can handle multiple clients at once automatically.
+
+---
+
+## 0. Problem Statement 1.7
+**1.7) Miles to Kilometer Conversion Server: Implement multi-threaded client/server Process communication using RMI for Miles to Kilometer Conversion Server on 2 different machines.**
+
+---
+
+## 1. Annotated Code with Comments
+
+### **File: ServerIntf.java**
+This file is the "Interface." It acts like a shared contract or a menu. It tells both the client and the server what functions are available to be used.
+
+```java
+import java.rmi.*; // Import the RMI library to use remote communication features.
+
+// Define an interface that 'extends Remote'. This tells Java these methods can be called over a network.
+public interface ServerIntf extends Remote { 
+    
+    // This is the blueprint for a method called 'MilesToKm'.
+    // It takes a decimal number (miles) as input and returns a decimal number as the result.
+    // 'throws RemoteException' is required because network calls can sometimes fail.
+    public double MilesToKm(double miles) throws RemoteException; 
+    
+} // End of the interface.
+```
+
+### **File: ServerImpl.java**
+This is the "Implementation." This file contains the actual "brain" or the logic that does the math.
+
+```java
+import java.rmi.*; // Import the standard RMI library.
+import java.rmi.server.*; // Import the server-specific RMI functions.
+
+// This class 'ServerImpl' implements the 'ServerIntf' menu we created earlier.
+// It 'extends UnicastRemoteObject' so it can stay active and listen for incoming calls.
+public class ServerImpl extends UnicastRemoteObject implements ServerIntf {
+
+    // This is a constructor. It runs once when the server starts.
+    public ServerImpl() throws RemoteException {
+        // 'super()' calls the setup code inside UnicastRemoteObject to prepare for networking.
+        super();
+    } // End of constructor.
+
+    // This is the actual calculation logic.
+    public double MilesToKm(double miles) throws RemoteException {
+        // We multiply miles by 1.609 to get kilometers and send the answer back.
+        return miles * 1.609; 
+    } // End of method.
+    
+} // End of class.
+```
+
+### **File: Server.java**
+This is the "Starter." It turns on the server and lists its name in a directory so the client can find it.
+
+```java
+import java.rmi.*; // Import RMI library.
+import java.rmi.registry.LocateRegistry; // Import the tool that starts the RMI directory.
+
+public class Server {
+    // The main entry point where the server program begins.
+    public static void main(String[] args){
+        // 'try' is a safety net; if something goes wrong (like a blocked port), it handles the error.
+        try{
+            // This line starts the RMI registry on port 1099. 
+            // It is like starting a phonebook service on this machine.
+            LocateRegistry.createRegistry(1099);
+
+            // Create an instance of our math logic (the brain).
+            ServerImpl obj = new ServerImpl();
+            
+            // Give this object a name ("Server") and register it in the local phonebook.
+            // "rmi://localhost/Server" means: this machine, name the service "Server".
+            Naming.rebind("rmi://localhost/Server", obj);
+            
+            // Print a message so the user knows the server is ready.
+            System.out.println("Server has started .");
+        }
+        // If an error happens, this block catches it.
+        catch(Exception e){
+            // Print the specific error to the screen.
+            System.out.println(e);
+        } // End of catch block.
+    } // End of main method.
+} // End of class.
+```
+
+### **File: Client.java**
+This is the "User" program. It takes the user's input and asks the server for the result.
+
+```java
+import java.rmi.*; // Import RMI library.
+import java.util.Scanner; // Import a tool to read what the user types on the keyboard.
+
+public class Client {
+    // The main entry point where the client program begins.
+    public static void main(String[] args) {
+        // 'try' is a safety net for network errors.
+        try {
+            // Create a Scanner object to listen to the keyboard.
+            Scanner sc = new Scanner(System.in);
+
+            // Print a message asking the user for input.
+            System.out.println("Enter distance in miles : ");
+            
+            // Read the decimal number (miles) typed by the user.
+            double miles = sc.nextDouble();
+
+            // Look up the "Server" in the RMI phonebook.
+            // "localhost" means the server is on this same machine.
+            ServerIntf obj = (ServerIntf) Naming.lookup("rmi://localhost/Server");
+
+            // Call the 'MilesToKm' method. This actually runs on the Server machine.
+            // The result is sent back over the network and stored in the 'result' variable.
+            double result = obj.MilesToKm(miles);
+
+            // Print the final answer to the user's screen.
+            System.out.println("Distance in Kilometer = " + result);
+
+        } 
+        // If the server isn't running or the IP is wrong, this block catches the error.
+        catch (Exception e) {
+            // Print the error details to the screen.
+            System.out.println(e);
+        } // End of catch block.
+    } // End of main method.
+} // End of class.
+```
+
+---
+
+## 2. Step-by-Step Execution Guide (Linux)
+
+### **Scenario A: Running on a Single Machine (For Testing)**
+1.  **Save the files:** Create a folder and save all 4 files (`ServerIntf.java`, `ServerImpl.java`, `Server.java`, `Client.java`) there.
+2.  **Open Terminal 1 (The Server):**
+    * Navigate to your folder.
+    * Compile the code: `javac *.java`
+    * Run the server: `java Server`
+    * *Result:* You should see "Server has started." **Leave this terminal open.**
+3.  **Open Terminal 2 (The Client):**
+    * Navigate to the same folder.
+    * Run the client: `java Client`
+    * *Result:* Enter a number, and you will see the kilometers.
+
+### **Scenario B: Running on 2 Different Machines (For the Exam)**
+
+**1. Prepare the Server (Machine 1):**
+* Open a terminal and type `hostname -I` to find the IP address. Let's assume it is `192.168.1.10`.
+* Compile: `javac *.java`
+* Run: `java Server`
+
+**2. Prepare the Client (Machine 2):**
+* **Important:** Open `Client.java` and find the line: `Naming.lookup("rmi://localhost/Server");`.
+* Change `localhost` to the Server's IP: `Naming.lookup("rmi://192.168.1.10/Server");`.
+* Copy `ServerIntf.java` and the modified `Client.java` to this machine.
+* Compile: `javac *.java`
+* Run: `java Client`
+
+---
+
+## 3. Important Things to Take Care of on Linux
+
+* **File Naming:** In Java, the filename **must** exactly match the class name inside it. `Server.java` is correct; `server.java` or `SERVER.java` will fail.
+* **Check Java:** Type `javac -version` and `java -version` to ensure Java is installed.
+* **IP Address:** Use `hostname -I` or `ifconfig` to find your IP. Both machines must be on the same local network (e.g., the same lab Wi-Fi or Ethernet).
+* **The Registry:** Your code uses `LocateRegistry.createRegistry(1099)`. This means the phonebook starts automatically. If you run the server a second time, you might get an "Address already in use" error. You must close the first server before starting again.
+* **Firewall:** Linux firewalls sometimes block Port 1099. If the client cannot connect, try disabling the firewall with `sudo ufw disable` (if you have permission).
+* **Common Error:** If you get `java.rmi.ConnectException`, it means the Server is not running or you typed the wrong IP address in the Client code.
+
+---
+
+## 4. Concepts and Theory (For Viva)
+
+
+* **RMI (Remote Method Invocation):** A technology that allows a Java object on one machine to call a method on an object on another machine as if it were local.
+* **Client-Server Architecture:** A model where the **Client** requests a service (conversion) and the **Server** performs the work.
+* **Multi-threading:** RMI is multi-threaded by default. Every time a client connects, the RMI system creates a new **Thread** (a separate task) to handle that specific client, so the server doesn't get "stuck" on one person.
+* **Interface (`ServerIntf`):** A shared file that defines what functions exist. It ensures the client and server "speak the same language."
+* **Stub and Skeleton:** * **Stub:** A "proxy" on the client side that packages the data to send it over the network.
+    * **Skeleton:** A "proxy" on the server side that receives the data and gives it to the actual implementation.
+* **rmiregistry:** A naming service (like a phonebook). The server registers its name here so the client knows where to find it on the network.
+* **Naming.rebind:** The command used by the server to list itself in the RMI registry.
+* **Naming.lookup:** The command used by the client to find the server in the registry.
+
+Since you are calculating a specific value, what would you like to know about how Java handles high-precision math for conversions like $1.609$?

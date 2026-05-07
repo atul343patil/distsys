@@ -1,0 +1,235 @@
+Good question — this is exactly what examiners expect in viva 👇
+Your current code works on **same machine**, but the question asks for **two different machines**.
+
+Let’s convert your setup to **real distributed RMI (2 systems)**.
+
+---
+
+# 🧠 What changes in “2 different machines”?
+
+Instead of:
+
+```text
+Client → localhost → Server
+```
+
+You will have:
+
+```text
+Client (Machine B) → IP address → Server (Machine A)
+```
+
+---
+
+# 🖥️ System Setup
+
+## 💻 Machine A (Server)
+
+* Runs: Server + RMI Registry
+* Has IP: example `192.168.1.10`
+
+## 💻 Machine B (Client)
+
+* Runs: Client
+* Connects to Server using IP
+
+---
+
+# 🔥 Step-by-Step (VERY IMPORTANT)
+
+---
+
+## ✅ Step 1: Find Server IP (Machine A)
+
+On Ubuntu:
+
+```bash
+ifconfig
+```
+
+or
+
+```bash
+ip a
+```
+
+👉 Example output:
+
+```text
+192.168.1.10
+```
+
+---
+
+## ✅ Step 2: Modify Server Code (IMPORTANT CHANGE)
+
+In `Server.java`, change:
+
+```java
+Naming.rebind("Server", obj);
+```
+
+👉 To:
+
+```java
+Naming.rebind("rmi://192.168.1.10/Server", obj);
+```
+
+(Replace with your actual IP)
+
+---
+
+## ✅ Step 3: Modify Client Code
+
+In `Client.java`, change:
+
+```java
+Naming.lookup("rmi://localhost/Server");
+```
+
+👉 To:
+
+```java
+Naming.lookup("rmi://192.168.1.10/Server");
+```
+
+---
+
+# ⚠️ MOST IMPORTANT LINE (Often asked in viva)
+
+Add this in **Server.java before binding**:
+
+```java
+System.setProperty("java.rmi.server.hostname", "192.168.1.10");
+```
+
+---
+
+## Final Server Code (important part)
+
+```java
+LocateRegistry.createRegistry(1099);
+System.setProperty("java.rmi.server.hostname", "192.168.1.10");
+Naming.rebind("rmi://192.168.1.10/Server", obj);
+```
+
+---
+
+# 🚀 Execution Steps
+
+---
+
+## 🖥️ On Machine A (Server)
+
+```bash
+javac *.java
+java Server
+```
+
+👉 Output:
+
+```text
+Server has started .
+```
+
+---
+
+## 💻 On Machine B (Client)
+
+👉 Copy ONLY these files:
+
+* `Client.java`
+* `ServerIntf.java`
+
+Then:
+
+```bash
+javac *.java
+java Client
+```
+
+---
+
+# 🔐 Important Network Conditions
+
+## ✅ Both machines must be:
+
+* On same WiFi / LAN
+* Example: College lab network
+
+---
+
+## ❌ If not working → check firewall
+
+On Ubuntu:
+
+```bash
+sudo ufw allow 1099
+```
+
+---
+
+# ⚠️ Common Errors + Fix
+
+## ❌ `Connection refused`
+
+✔ Server not running
+✔ Wrong IP
+
+---
+
+## ❌ `UnknownHostException`
+
+✔ Wrong IP format
+
+---
+
+## ❌ `NotBoundException`
+
+✔ Name mismatch (`Server`)
+
+---
+
+## ❌ Timeout error
+
+✔ Network issue
+✔ Firewall blocking
+
+---
+
+# 🧠 Viva Explanation (VERY IMPORTANT)
+
+If examiner asks:
+
+👉 “How is communication happening?”
+
+You say:
+
+> “Client looks up remote object using server IP and registry. Server exports object using RMI registry and client invokes remote methods over network.”
+
+---
+
+# 🎯 Summary
+
+| Step | Action                    |
+| ---- | ------------------------- |
+| 1    | Get Server IP             |
+| 2    | Replace localhost with IP |
+| 3    | Set hostname in server    |
+| 4    | Run server on Machine A   |
+| 5    | Run client on Machine B   |
+
+---
+
+# 🚀 Pro Tip (to impress examiner)
+
+Say this:
+
+> “RMI uses stub internally and method calls are serialized and sent over TCP/IP.”
+
+---
+
+If you want, next I can:
+
+* Simulate **exact lab scenario**
+* Or give **viva questions + answers** for this experiment 👍

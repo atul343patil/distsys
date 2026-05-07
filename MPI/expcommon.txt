@@ -1,0 +1,134 @@
+For a new Linux machine, the process is similar but commands use Linux paths and syntax.
+
+# 1. Install Java 8
+
+For Ubuntu/Debian:
+
+```bash id="jlwm2x"
+sudo apt update
+sudo apt install openjdk-8-jdk
+```
+
+Check:
+
+```bash id="39yq7k"
+java -version
+javac -version
+```
+
+---
+
+# 2. Extract MPJ Express
+
+Suppose MPJ is extracted to:
+
+```text id="61l4kp"
+/home/user/mpj/mpj-v0_44
+```
+
+---
+
+# 3. Set MPJ_HOME
+
+Temporary:
+
+```bash id="k7a2h8"
+export MPJ_HOME=/home/user/mpj/mpj-v0_44
+```
+
+Add MPJ to PATH:
+
+```bash id="67nsdp"
+export PATH=$MPJ_HOME/bin:$PATH
+```
+
+---
+
+# 4. Go to Project Folder
+
+```bash id="g8tq9z"
+cd ~/MPI/2.1_MPISum
+```
+
+---
+
+# 5. Compile Program
+
+```bash id="ub6g4j"
+javac -cp ".:$MPJ_HOME/lib/mpj.jar" MPISum.java
+```
+
+⚠️ Linux uses:
+
+```text id="rlnrvt"
+:
+```
+
+instead of:
+
+```text id="fj9kwx"
+;
+```
+
+in classpath.
+
+---
+
+# 6. Run Program
+
+```bash id="5jcyk5"
+mpjrun.sh -np 4 MPISum
+```
+
+OR:
+
+```bash id="nmjlwm"
+$MPJ_HOME/bin/mpjrun.sh -np 4 MPISum
+```
+
+---
+
+# Important Windows vs Linux Difference
+
+| Feature              | Windows              | Linux  |
+| -------------------- | -------------------- | ------ |
+| Classpath separator  | `;`                  | `:`    |
+| Environment variable | `%VAR%` / `$env:VAR` | `$VAR` |
+| Run script           | `.bat`               | `.sh`  |
+| Path separator       | `\`                  | `/`    |
+
+---
+
+# Permanent Setup on Linux (Recommended)
+
+Add to:
+
+```bash id="7p31bn"
+~/.bashrc
+```
+
+```bash id="5z2kwl"
+export MPJ_HOME=/home/user/mpj/mpj-v0_44
+export PATH=$MPJ_HOME/bin:$PATH
+```
+
+Then:
+
+```bash id="8cs1fv"
+source ~/.bashrc
+```
+
+---
+
+# Final Linux Commands Together
+
+```bash id="x5wq6u"
+export MPJ_HOME=/home/user/mpj/mpj-v0_44
+export PATH=$MPJ_HOME/bin:$PATH
+
+cd ~/MPI/2.1_MPISum
+
+javac -cp ".:$MPJ_HOME/lib/mpj.jar" MPISum.java
+
+mpjrun.sh -np 4 MPISum
+```

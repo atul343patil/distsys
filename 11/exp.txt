@@ -1,0 +1,152 @@
+The provided code is **perfectly matching** for the given problem statement. It correctly implements the Java Remote Method Invocation (RMI) architecture to calculate a factorial across different processes. While the code does not manually create new threads, Java RMI is **multi-threaded by design**; it automatically handles concurrent client requests by spawning new threads for each incoming call to the server.
+
+---
+
+**0. Problem Statement 1.11**
+Factorial of Number: Implement multi-threaded client/server Process communication using RMI for Find factorial of Number. Perform operations on 2 different machines.
+
+---
+
+### 1. ADD COMMENTS TO THE CODE
+
+#### **File: ServerIntf.java**
+This is the "Interface" file. It acts as a contract or a shared menu that tells both the client and the server what functions are available to be called.
+
+```java
+import java.rmi.*; // This brings in the basic RMI tools needed for network communication.
+
+public interface ServerIntf extends Remote { // This declares a public interface that "Remote" machines can talk to.
+    public long Factorial(int num) throws RemoteException; // This defines the function name, its whole-number input, its large-number result, and warns that network errors might occur.
+} // This marks the end of the interface definition.
+```
+
+#### **File: ServerImpl.java**
+This is the "Implementation" file. It contains the actual "brain" or the logic that calculates the factorial.
+
+```java
+import java.rmi.*; // This imports the standard RMI tools.
+import java.rmi.server.*; // This imports tools specifically for server-side operations.
+
+public class ServerImpl extends UnicastRemoteObject implements ServerIntf { // This class provides the real logic and stays active on the network to listen for calls.
+
+    public ServerImpl() throws RemoteException { // This is the constructor which runs when the object is created.
+        super(); // This calls the hidden setup code in the parent class to prepare for networking.
+    } // This marks the end of the constructor.
+
+    public long Factorial(int num) throws RemoteException { // This is the actual math function that computes the factorial.
+        long fact = 1; // This creates a variable to store our result, starting at 1.
+
+        for(int i = 1; i <= num; i++) { // This loop starts at 1 and counts up to the user's number.
+            fact = fact * i; // This multiplies the current total by the next number in the count.
+        } // This marks the end of the counting loop.
+        return fact; // This sends the final calculated result back to the client machine.
+    } // This marks the end of the math function.
+} // This marks the end of the class definition.
+```
+
+#### **File: Server.java**
+This is the "Starter" file. It turns on the server and lists its name in a directory so the client can find it.
+
+```java
+import java.rmi.*; // This brings in the tools for communication.
+import java.rmi.registry.LocateRegistry; // This brings in the specific tool to create a service directory.
+
+public class Server { // This defines the main program that runs on the server computer.
+    public static void main(String[] args){ // This is the starting point where the server begins its work.
+        try{ // This starts a safety block to handle any errors that might happen during startup.
+            LocateRegistry.createRegistry(1099); // This starts a naming service (like a phonebook) on the standard port 1099.
+
+            ServerImpl obj = new ServerImpl(); // This creates the "brain" object that knows how to do factorials.
+            Naming.rebind("rmi://localhost/Server", obj); // This registers the "brain" object in the phonebook under the name "Server".
+            System.out.println("Server has started ."); // This prints a message so the user knows the server is ready.
+        } // This marks the end of the safety block.
+        catch(Exception e){ // This block runs only if an error occurred during the steps above.
+            System.out.println(e); // This prints the error message to the screen.
+        } // This marks the end of the error handling.
+    } // This marks the end of the main function.
+} // This marks the end of the server class.
+```
+
+#### **File: Client.java**
+This is the "User" file. It runs on a different computer, takes the user's input, and asks the server for the answer.
+
+```java
+import java.rmi.*; // This imports the network communication tools.
+import java.util.Scanner; // This imports a tool to read what the user types on the keyboard.
+
+public class Client { // This defines the program that the user will interact with.
+    public static void main(String[] args) { // This is the starting point for the client program.
+        try { // This starts a safety block to handle network or input errors.
+            Scanner sc = new Scanner(System.in); // This initializes the tool to listen to the keyboard.
+
+            System.out.println("Enter number : "); // This prints a prompt asking the user for a number.
+            int num = sc.nextInt(); // This waits for the user to type a number and saves it in 'num'.
+
+            ServerIntf obj = (ServerIntf) Naming.lookup("rmi://localhost/Server"); // This looks for the "Server" in the phonebook on the network.
+
+            long result = obj.Factorial(num); // This calls the math function on the server machine and waits for the result.
+
+            System.out.println("Factorial = " + result); // This prints the final answer received from the server.
+
+        } catch (Exception e) { // This block runs if the server is not found or the network fails.
+            System.out.println(e); // This prints the details of the connection error.
+        } // This marks the end of the error handling.
+    } // This marks the end of the main function.
+} // This marks the end of the client class.
+```
+
+---
+
+### 2. STEP-BY-STEP EXECUTION GUIDE (For Linux Lab Machines)
+
+#### **Running on a Single Machine (For Testing)**
+1.  **Save Files:** Save all four files (`ServerIntf.java`, `ServerImpl.java`, `Server.java`, `Client.java`) in one folder.
+2.  **Open Terminal:** Navigate to that folder.
+3.  **Compile:** Type `javac *.java` and press Enter.
+4.  **Start Server:** Type `java Server` and press Enter. You should see "Server has started ."
+5.  **Run Client:** Open a **new** terminal tab or window in the same folder.
+6.  **Execute Client:** Type `java Client` and press Enter. Follow the prompts.
+
+#### **Running on Two Machines (Final Setup)**
+
+**Machine 1 (Server):**
+1.  **Find IP Address:** Open terminal and type `hostname -I`. Note the first number (e.g., `192.168.1.10`).
+2.  **Save Files:** Save all 4 Java files.
+3.  **Compile:** Type `javac *.java`.
+4.  **Run:** Type `java Server`.
+
+**Machine 2 (Client):**
+1.  **Edit Code:** Open `Client.java`. Find the line:
+    `Naming.lookup("rmi://localhost/Server");`
+    Change `localhost` to the Server's IP address:
+    `Naming.lookup("rmi://192.168.1.10/Server");`
+2.  **Save and Copy:** You only strictly need `ServerIntf.java` and your edited `Client.java` here.
+3.  **Compile:** Type `javac *.java`.
+4.  **Run:** Type `java Client`. Enter your number and press Enter.
+
+---
+
+### 3. IMPORTANT THINGS TO TAKE CARE OF ON LINUX LAB MACHINES
+
+* **File Naming Rules:** The filename **must** match the class name inside. `Server.java` is correct; `server.java` or `SERVER.java` will result in a compile error because Linux is case-sensitive.
+* **Tool Checks:** Type `java -version` and `javac -version` to ensure Java is installed.
+* **IP Address:** Always use `hostname -I` or `ifconfig` to find the current IP. Lab machine IPs can change between sessions.
+* **Firewall/Ports:** RMI uses port **1099** by default. If the connection is refused, the firewall might be blocking that port. You can check if a port is open using `telnet [IP] 1099`.
+* **Common Beginner Errors:**
+    * **Connection Refused:** Usually means the `Server` program is not running yet.
+    * **Class Not Found:** Ensure you have compiled both the Interface and the Client/Server files in the same directory.
+    * **Registry Already Running:** If you get an error saying the registry is already started, another student might be using that port on that machine.
+* **Stopping Programs:** Press `Ctrl + C` in the terminal to stop a running Server or Client.
+
+---
+
+### 4. CONCEPTS AND THEORY (For Viva/Examiner Questions)
+
+* **RMI (Remote Method Invocation):** A technology that allows a Java program on one machine to call a method on an object located on another machine as if it were a local call.
+* **Client-Server Architecture:** A model where the **Server** provides a service (calculating factorial) and the **Client** requests that service.
+* **Multi-threading:** In this practical, RMI handles multi-threading automatically. Each time a client connects, the RMI system starts a new thread so the server doesn't get "blocked" while talking to one person.
+* **Interfaces:** The `ServerIntf` acts as a shared list of rules. Both machines use it to ensure they are calling and providing the correct functions.
+* **Stub and Skeleton:**
+    * **Stub:** A "proxy" or stand-in on the **Client** side that packages the data and sends it over the network.
+    * **Skeleton:** A stand-in on the **Server** side that receives the data and passes it to the actual implementation. (Modern Java creates these automatically).
+* **rmiregistry:** A naming service (like a phonebook) where the server registers its name (`Server`) so the client can find its actual network address.

@@ -1,0 +1,223 @@
+The code you provided is **perfectly matching** for the given problem statement. It correctly uses Java Remote Method Invocation (RMI) to allow a client to send a word to a server, which then counts the vowels and returns the result. Although there is no manual "Thread" code, Java RMI is **multi-threaded by design**, meaning it automatically creates a new thread for every client that connects.
+
+---
+
+**0. Problem Statement 1.10**
+Implement multi-threaded client/server Process communication using RMI for Counting Vowels Present in Word. Perform operations on 2 different machines.
+
+---
+
+### 1. ADD COMMENTS TO THE CODE
+
+#### **File Name: ServerIntf.java**
+This file is the "Interface." It acts like a shared contract or a menu that tells both the client and the server what functions are available.
+
+```java
+// Import the RMI library to allow communication over a network
+import java.rmi.*;
+
+// Define an interface named ServerIntf that inherits from the 'Remote' class
+// This tells Java that the methods inside here can be called from another computer
+public interface ServerIntf extends Remote {
+    
+    // Declare a method named 'CountVowels' that takes a piece of text (String)
+    // It returns a whole number (int) as the result
+    // 'throws RemoteException' is required because network calls can sometimes fail
+    public int CountVowels(String str) throws RemoteException;
+
+} // End of the interface
+```
+
+#### **File Name: ServerImpl.java**
+This is the "Implementation" file. It contains the actual "brain" or logic that performs the vowel counting.
+
+```java
+// Import the basic RMI library
+import java.rmi.*;
+// Import the server-side RMI tools to allow this object to live on a network
+import java.rmi.server.*;
+
+// This class 'ServerImpl' implements the 'ServerIntf' menu we created
+// It 'extends' UnicastRemoteObject to make it a reachable object over the network
+public class ServerImpl extends UnicastRemoteObject implements ServerIntf {
+
+    // This is the constructor; it runs once when the server object is created
+    // It calls 'super()' to set up the internal networking parts of RMI
+    public ServerImpl() throws RemoteException {
+        super();
+    } // End of constructor
+
+    // This is the actual logic for the 'CountVowels' method
+    public int CountVowels(String str) throws RemoteException {
+        // Create a variable to keep track of the count, starting at zero
+        int count = 0;
+        
+        // Convert the entire word to lowercase so we don't have to check for 'A' and 'a' separately
+        str = str.toLowerCase();
+
+        // Start a loop to look at every single character in the word one by one
+        for(int i = 0; i < str.length(); i++) {
+            // Get the character at the current position 'i'
+            char ch = str.charAt(i);
+            
+            // Check if that character is 'a', 'e', 'i', 'o', or 'u'
+            if(ch=='a' || ch=='e' || ch=='i' || ch=='o' || ch=='u') {
+                // If it is a vowel, increase our count by one
+                count++;
+            }
+        } // End of loop
+        
+        // Send the final total count back to the client
+        return count;
+    } // End of method
+} // End of class
+```
+
+#### **File Name: Server.java**
+This is the "Starter" file. It turns on the server and registers the service in a directory so the client can find it.
+
+```java
+// Import the RMI library
+import java.rmi.*;
+// Import the Registry tool which acts like a phone directory for RMI services
+import java.rmi.registry.LocateRegistry;
+
+// Define the main Server class
+public class Server {
+    // This is the main entry point where the server program begins
+    public static void main(String[] args){
+        // 'try' is used to catch any errors that might happen during startup
+        try{
+            // Start the RMI registry service on port 1099
+            // This is the "phonebook" that clients check to find the server
+            LocateRegistry.createRegistry(1099);
+
+            // Create an instance of our math logic (the ServerImpl object)
+            ServerImpl obj = new ServerImpl();
+            
+            // Give the object a name ("Server") and register it in the phonebook
+            // "rmi://localhost/Server" means register it on this machine as "Server"
+            Naming.rebind("rmi://localhost/Server", obj);
+            
+            // Print a message so the user knows the server is ready
+            System.out.println("Server has started .");
+        }
+        // If an error occurs (like the port being blocked), catch it here
+        catch(Exception e){
+            // Print the error details to the screen
+            System.out.println(e);
+        } // End of catch block
+    } // End of main method
+} // End of class
+```
+
+#### **File Name: Client.java**
+This is the "User" program. It takes the word you type and asks the server for the result.
+
+```java
+// Import the RMI library
+import java.rmi.*;
+// Import the Scanner tool to read what you type on the keyboard
+import java.util.Scanner;
+
+// Define the main Client class
+public class Client {
+    // This is the main entry point where the client program begins
+    public static void main(String[] args) {
+        // 'try' is used to handle potential network or connection errors
+        try {
+            // Create a Scanner object to listen for keyboard input
+            Scanner sc = new Scanner(System.in);
+
+            // Ask the user to type a word
+            System.out.println("Enter a word : ");
+            // Read the word entered by the user and store it in 'str'
+            String str = sc.nextLine();
+
+            // Look up the "Server" service in the network phonebook
+            // Note: "localhost" means this computer. You change this for 2 machines.
+            ServerIntf obj = (ServerIntf) Naming.lookup("rmi://localhost/Server");
+
+            // Call the 'CountVowels' method that actually lives on the Server machine
+            // The result is sent back over the network and stored in 'result'
+            int result = obj.CountVowels(str);
+
+            // Print the final result to the client's screen
+            System.out.println("Number of vowels = " + result);
+
+        } 
+        // If the server isn't running or the IP is wrong, catch the error
+        catch (Exception e) {
+            // Print the error details
+            System.out.println(e);
+        } // End of catch block
+    } // End of main method
+} // End of class
+```
+
+---
+
+### 2. STEP-BY-STEP EXECUTION GUIDE (For Linux Lab Machines)
+
+#### **Scenario A: Running on a Single Machine (Testing)**
+1.  Open a terminal.
+2.  Save all 4 files (`ServerIntf.java`, `ServerImpl.java`, `Server.java`, `Client.java`) in one folder.
+3.  **Compile the code:**
+    `javac *.java`
+4.  **Run the Server:**
+    `java Server`
+    *(The terminal should say "Server has started ." Do not close it.)*
+5.  **Run the Client:**
+    Open a **new terminal tab/window**, go to the same folder, and type:
+    `java Client`
+6.  **Input:** Enter a word like "distributed" and press Enter.
+
+#### **Scenario B: Running on 2 Different Machines**
+
+**1. Find the Server's IP Address:**
+On **Machine 1 (Server)**, open a terminal and type:
+`hostname -I` (or `ifconfig`). Note the IP address (e.g., `192.168.1.10`).
+
+**2. Update the Client Code:**
+On **Machine 2 (Client)**, open `Client.java` and find the line:
+`ServerIntf obj = (ServerIntf) Naming.lookup("rmi://localhost/Server");`
+Change `localhost` to the Server's IP address.
+*Example:* `Naming.lookup("rmi://192.168.1.10/Server");`
+
+**3. Compile and Run:**
+* **Machine 1 (Server):**
+    1.  Copy all 4 files here.
+    2.  `javac *.java`
+    3.  `java Server`
+* **Machine 2 (Client):**
+    1.  Copy `ServerIntf.java` and the **edited** `Client.java` here.
+    2.  `javac *.java`
+    3.  `java Client`
+
+---
+
+### 3. IMPORTANT THINGS TO TAKE CARE OF ON LINUX
+
+* **File Naming:** Linux is case-sensitive. `Server.java` is NOT the same as `server.java`. The filename must exactly match the `public class` name.
+* **Checking Java:** Type `java -version` and `javac -version` to ensure Java is installed.
+* **Firewall:** Linux labs often block ports. If you get a "Connection Refused" error, the firewall might be blocking port 1099.
+* **IP Address:** Ensure both machines are on the same local network (e.g., the same lab Wi-Fi or Ethernet).
+* **Registry Issues:** Your code starts the registry using `createRegistry(1099)`. If you try to run the server twice, you will get an "Address already in use" error. Use `pkill -9 java` to stop any stuck processes.
+* **Common Error:** If you get `java.rmi.NotBoundException`, it means the client is looking for "Server" but the server hasn't registered itself yet. Always start the Server program **before** the Client.
+
+---
+
+### 4. CONCEPTS AND THEORY (For Viva/Examiner Questions)
+
+
+* **RMI (Remote Method Invocation):** A technology that allows a Java object on one machine to call methods on an object living on another machine as if it were a local call.
+* **Client-Server Architecture:** A model where one computer (the **Client**) asks for a specific task and another computer (the **Server**) performs that task and sends back the answer.
+* **Multi-threading:** RMI is multi-threaded by default. Every time a client connects, the RMI system automatically starts a new **Thread** (a separate path of execution) to handle that request. This prevents the server from getting "stuck" if many clients connect at once.
+* **Interface (`ServerIntf`):** A shared file that defines what functions exist. It acts as a bridge so the client knows what it can ask for.
+* **Stub and Skeleton:**
+    * **Stub:** A "proxy" or stand-in on the **Client** machine that packages the data and sends it over the network.
+    * **Skeleton:** A stand-in on the **Server** machine that receives the package, unpacks it, and gives it to the actual server logic.
+* **rmiregistry:** A naming service (like a phonebook). The server lists its name and network location here so the client can find it.
+* **LocateRegistry.createRegistry(1099):** This specific line in your `Server.java` starts the RMI directory service programmatically so you don't have to start it manually in the terminal.
+
+Since you are counting vowels, would you like to know how you could modify this code to count consonants as well for the exam?

@@ -1,0 +1,406 @@
+Yes, the given code is a **perfect match** for the given problem statement. 
+
+It implements a complete SOAP-based Web Service using the JAX-WS (Java API for XML Web Services) standard. The code includes a service class (`SimpleInterestWS.java`) that defines the interest calculation logic, a publisher server (`Publisher.java`) that deploys the service on an HTTP endpoint, and a consumer client (`SimpleInterestClient.java`) that collects inputs from the keyboard and invokes the web service over the network.
+
+---
+
+### **0. Problem Statement 7.2**
+**7.2 Create a Simple Interest Calculator web service and consume that web service.**
+
+---
+
+### **1. ADD COMMENTS TO THE CODE**
+
+Every line and logical block in your provided files is fully commented below in simple, plain English designed for an absolute beginner with zero Java experience.
+
+#### **File 1: SimpleInterestWS.java**
+Save this file inside a folder path: `org/me/interest/SimpleInterestWS.java`
+
+```java
+// Declare that this class belongs to the package named org.me.interest.
+// A package organizes files into a folder structure to prevent naming conflicts.
+package org.me.interest;
+
+// Import the WebService annotation class from Java's standard web services package.
+// Annotations start with '@' and configure special behaviors for classes and methods.
+import javax.jws.WebService;
+
+// Import the WebMethod annotation to expose specific Java methods over the network.
+import javax.jws.WebMethod;
+
+// Import the WebParam annotation to name the input variables inside the XML messages.
+import javax.jws.WebParam;
+
+// Mark this class as a Web Service.
+// The serviceName parameter specifies the official name of the service in the XML descriptor (WSDL).
+@WebService(serviceName = "SimpleInterestWS")
+public class SimpleInterestWS {
+
+    // Mark this method as a Web Service operation that clients can execute remotely.
+    // The operationName defines what the client will call to invoke this method.
+    @WebMethod(operationName = "calculateSI")
+    public double calculateSI(
+            // Define the first input parameter as a decimal number named 'principal' in XML.
+            @WebParam(name = "principal") double principal,
+            // Define the second input parameter as a decimal number named 'rate' in XML.
+            @WebParam(name = "rate")      double rate,
+            // Define the third input parameter as a decimal number named 'time' in XML.
+            @WebParam(name = "time")      double time) {
+        
+        // Apply the mathematical formula for Simple Interest: (P * R * T) / 100.
+        // It returns the resulting decimal value back to the caller.
+        return (principal * rate * time) / 100;
+        
+    } // End of the calculateSI method.
+
+    // Mark this second method as another Web Service operation for calculating the total amount.
+    @WebMethod(operationName = "calculateTotal")
+    public double calculateTotal(
+            // Define the input decimal parameter for Principal.
+            @WebParam(name = "principal") double principal,
+            // Define the input decimal parameter for the Interest Rate.
+            @WebParam(name = "rate")      double rate,
+            // Define the input decimal parameter for Time in years.
+            @WebParam(name = "time")      double time) {
+        
+        // First calculate the simple interest using the mathematical formula.
+        // Save this temporary value in a decimal variable called 'si'.
+        double si = (principal * rate * time) / 100;
+        
+        // Add the original principal amount to the calculated simple interest.
+        // This gives the total amount due at the end of the term and returns it.
+        return principal + si;
+        
+    } // End of the calculateTotal method.
+    
+} // End of the SimpleInterestWS class.
+```
+
+---
+
+#### **File 2: Publisher.java**
+Save this file inside a folder path: `org/me/interest/Publisher.java`
+
+```java
+// Declare that this file belongs to the package named org.me.interest.
+package org.me.interest;
+
+// Import the Endpoint utility class from Java's built-in XML web services library.
+// Endpoint is used to launch and publish a lightweight HTTP server to host the service.
+import javax.xml.ws.Endpoint;
+
+// Define a public class named Publisher that will serve as our web service host.
+public class Publisher {
+    
+    // The main method is the entry point where execution begins when we run the program.
+    public static void main(String[] args) {
+        
+        // Store the target network address (URL) of our web service in a text variable.
+        // localhost refers to this computer. Port 8081 is the open port we choose to use.
+        String url = "http://localhost:8081/ws/interest";
+        
+        // Print a message on the terminal to show the student that the server is starting.
+        System.out.println("Starting Simple Interest Web Service at: " + url);
+        
+        // The static publish method launches an HTTP server at the specified URL.
+        // It deploys a new instance of our SimpleInterestWS class onto that address.
+        Endpoint.publish(url, new SimpleInterestWS());
+        
+        // Print a message telling the student that the web service is active.
+        System.out.println("Server is running! Do not close this terminal.");
+        
+        // Print the address where the raw XML description (WSDL document) can be viewed.
+        System.out.println("WSDL available at: " + url + "?wsdl");
+        
+    } // End of the main method.
+    
+} // End of the Publisher class.
+```
+
+---
+
+#### **File 3: SimpleInterestClient.java**
+Save this file in your root folder: `SimpleInterestClient.java` (outside the `org` folder).
+
+```java
+// Import the generated stub classes that our client needs to communicate with the service.
+// These stub files are created automatically by a utility tool named 'wsimport'.
+import org.me.interest.SimpleInterestWS;
+import org.me.interest.SimpleInterestWS_Service;
+
+// Import the Scanner class to read keyboard input entered by the user in the terminal.
+import java.util.Scanner;
+
+// Define the public client class that the user runs to consume the service.
+public class SimpleInterestClient {
+    
+    // The main method starts the client application.
+    public static void main(String[] args) {
+        
+        // Use a try-catch block to handle unexpected errors (such as network connection failures).
+        try {
+            
+            // Create a new instance of the generated service helper class.
+            // This reads the remote descriptor and sets up network-level communication.
+            SimpleInterestWS_Service service = new SimpleInterestWS_Service();
+            
+            // Extract the interface port object from the service.
+            // This 'port' acts as a local proxy. We can call methods on it as if they were local.
+            SimpleInterestWS port = service.getSimpleInterestWSPort();
+
+            // Create a Scanner object named 'scanner' to read input from the standard keyboard.
+            Scanner scanner = new Scanner(System.in);
+
+            // Print a prompt asking the user to enter the Principal amount.
+            System.out.print("Enter Principal amount: ");
+            // Wait for the user to type a decimal value and save it in a variable named 'principal'.
+            double principal = scanner.nextDouble();
+
+            // Print a prompt asking the user to enter the Rate of Interest.
+            System.out.print("Enter Rate of Interest (% per year): ");
+            // Read the input decimal and save it in a variable named 'rate'.
+            double rate = scanner.nextDouble();
+
+            // Print a prompt asking the user to enter Time in years.
+            System.out.print("Enter Time (in years): ");
+            // Read the input decimal and save it in a variable named 'time'.
+            double time = scanner.nextDouble();
+
+            // Call the calculateSI method on the remote port proxy.
+            // This packages the inputs into an XML SOAP request, sends them, and retrieves the result.
+            double si    = port.calculateSI(principal, rate, time);
+            
+            // Call the calculateTotal method on the remote port proxy to get the total amount.
+            double total = port.calculateTotal(principal, rate, time);
+
+            // Print an empty line to format the output.
+            System.out.println("\nWeb Service Response:");
+            
+            // Output the simple interest returned from the server to the terminal.
+            System.out.println("Simple Interest = " + si);
+            
+            // Output the total calculated amount returned from the server to the terminal.
+            System.out.println("Total Amount    = " + total);
+
+            // Close the scanner object to free up computer system memory resources.
+            scanner.close();
+
+        } catch (Exception e) {
+            
+            // If any error occurs (e.g., server is offline), print the step-by-step error report.
+            e.printStackTrace();
+            
+        } // End of try-catch block.
+        
+    } // End of main method.
+    
+} // End of SimpleInterestClient class.
+```
+
+---
+
+### **2. STEP-BY-STEP EXECUTION GUIDE (For Linux Lab Machines)**
+
+To execute this program, we must use the Linux terminal. Web services rely on a "WSDL compilation step" using a built-in tool called `wsimport`.
+
+
+
+#### **Scenario A: Running on a Single Machine**
+
+1.  **Open a Linux Terminal** and create the required package directories:
+    ```bash
+    mkdir -p org/me/interest
+    ```
+2.  **Save the files** exactly with their correct names and paths:
+    - Save the code for `SimpleInterestWS.java` inside `org/me/interest/SimpleInterestWS.java`
+    - Save the code for `Publisher.java` inside `org/me/interest/Publisher.java`
+    - Save the code for `SimpleInterestClient.java` directly in your main directory (where you can see the `org` folder).
+3.  **Compile the Web Service and Server files**:
+    ```bash
+    javac org/me/interest/SimpleInterestWS.java org/me/interest/Publisher.java
+    ```
+4.  **Run the Server** to start hosting the service:
+    ```bash
+    java org.me.interest.Publisher
+    ```
+    *Note: Keep this terminal window open! The server needs to run continuously in the background.*
+5.  **Generate Client Helper Stub Files (Open a SECOND Terminal)**:
+    Navigate to your root folder in a new terminal window and let Java auto-generate the network classes from the running server's description:
+    ```bash
+    wsimport -keep -p org.me.interest http://localhost:8081/ws/interest?wsdl
+    ```
+6.  **Compile the Client program**:
+    ```bash
+    javac SimpleInterestClient.java
+    ```
+7.  **Run the Client program**:
+    ```bash
+    java SimpleInterestClient
+    ```
+8.  **Expected output of the Client execution**:
+    ```text
+    Enter Principal amount: 10000
+    Enter Rate of Interest (% per year): 5
+    Enter Time (in years): 2
+
+    Web Service Response:
+    Simple Interest = 1000.0
+    Total Amount    = 11000.0
+    ```
+
+---
+
+#### **Scenario B: Running on Two Machines (Distributed Network)**
+
+Suppose we have two physical Linux computers connected to the same lab network:
+* **Machine 1 (Server)** has the IP address: `192.168.1.100`
+* **Machine 2 (Client)** has the IP address: `192.168.1.101`
+
+##### **Step 1: Edit the Server Address in code (On Machine 1)**
+Before compilation, open `org/me/interest/Publisher.java` on **Machine 1** and change `localhost` to its actual local IP address:
+```java
+String url = "http://192.168.1.100:8081/ws/interest";
+```
+
+##### **Step 2: Start the Server (On Machine 1)**
+Compile and execute the server in Machine 1's terminal:
+```bash
+javac org/me/interest/SimpleInterestWS.java org/me/interest/Publisher.java
+java org.me.interest.Publisher
+```
+*Leave this terminal open and running.*
+
+##### **Step 3: Generate Stubs & Run Client (On Machine 2)**
+On **Machine 2**, open a fresh terminal. Tell it to download the description from Machine 1's IP address and create the local stubs:
+```bash
+wsimport -keep -p org.me.interest http://192.168.1.100:8081/ws/interest?wsdl
+```
+Now, save `SimpleInterestClient.java` onto Machine 2, compile it, and run it:
+```bash
+javac SimpleInterestClient.java
+java SimpleInterestClient
+```
+*The client will prompt you for variables, make a network call to Machine 1, get the response, and display the result.*
+
+---
+
+### **3. IMPORTANT THINGS TO TAKE CARE OF ON LINUX LAB MACHINES**
+
+* **File Naming and Casing:** Linux is strictly case-sensitive. Saving a file as `publisher.java` instead of `Publisher.java` will fail compilation. The filename must perfectly match the `public class` declaration name inside the file.
+* **Checking Java Version:** JAX-WS is built into Java JDK versions 8 and lower. If your lab uses Java 9 or above, the built-in JAX-WS libraries might be missing. Verify your configuration with:
+    ```bash
+    java -version
+    javac -version
+    ```
+* **The wsimport Utility:** If running `wsimport` throws a "command not found" error, it means Java's utility binaries are not on your path. Locate the binary path (typically `/usr/lib/jvm/java-8-openjdk-amd64/bin/wsimport`) or run:
+    ```bash
+    /usr/lib/jvm/java-8-openjdk-amd64/bin/wsimport -keep -p org.me.interest http://localhost:8081/ws/interest?wsdl
+    ```
+* **Checking Port Conflict:** If port `8081` is already in use by another student's process, you will receive a "BindException" (Address already in use). You can check what is running on that port with:
+    ```bash
+    netstat -tupln | grep 8081
+    ```
+    If busy, open `Publisher.java` and change the port number from `8081` to something else (e.g., `8085` or `9000`), then restart the process.
+* **Finding the Machine's IP Address:** To find your computer's IP address on Linux, run:
+    ```bash
+    hostname -I
+    ```
+* **Handling Blocked Ports (Firewall):** If Machine 2 fails to reach Machine 1 with a "Connection timed out" error, the Linux firewall on Machine 1 might be blocking port `8081`. You can temporarily disable the firewall or allow the port via command line:
+    ```bash
+    sudo ufw allow 8081/tcp
+    ```
+
+---
+
+### **4. CONCEPTS AND THEORY (For Viva/Examiner Questions)**
+
+* **Web Service (Distributed Technology Used):**
+    * *What it is:* A software application designed to support interoperable machine-to-machine interaction over a network. 
+    * *Why it is used:* It allows applications running on different platforms, devices, or programming languages to communicate seamlessly.
+    * *How it works here:* `SimpleInterestWS` is published as a service. It processes interest-calculation queries and sends back responses using standard web technologies.
+* **SOAP (Simple Object Access Protocol):**
+    * *What it is:* An XML-based messaging protocol specification for exchanging structured information.
+    * *Why it is used:* It provides a highly standardized, secure, and reliable communication format.
+    * *How it works here:* When you call `port.calculateSI(...)`, the request parameters (principal, rate, time) are packed into a SOAP XML message structure, sent over HTTP, processed by the server, and sent back as a SOAP XML response.
+* **WSDL (Web Services Description Language):**
+    * *What it is:* An XML document that defines what a web service can do, including its operations, parameter data types, and endpoint location.
+    * *Why it is used:* It acts as a contract, enabling client-generating tools to understand exactly how to talk to the service.
+    * *How it works here:* The running server generates this file at `http://localhost:8081/ws/interest?wsdl`. The client reads this file during the `wsimport` step to generate local proxy classes.
+* **Endpoint:**
+    * *What it is:* The physical web address (URL) where a web service can be accessed by clients over the network.
+    * *Why it is used:* To provide a designated gateway for incoming connections.
+    * *How it works here:* `http://localhost:8081/ws/interest` acts as the target endpoint.
+* **Client-Server Architecture:**
+    * *What it is:* A system model that partitions tasks between resource or service providers (servers) and service requesters (clients).
+    * *Why it is used:* To keep the backend processing logic (interest formulas) centralized and separate from the user interface (client inputs).
+    * *How it works here:* The `Publisher` starts the server hosting our calculation service, while `SimpleInterestClient` is the client that initiates requests.
+* **Stubs (Client Proxy):**
+    * *What it is:* A local proxy object on the client machine that mimics the remote interface of the server.
+    * *Why it is used:* To hide the complexity of remote communication (network socket operations, XML parsing, and data marshaling).
+    * *How it works here:* The classes generated inside `org.me.interest` by `wsimport` act as stubs. When the student calls `port.calculateSI(...)`, they are talking to the local stub, which silently translates that call into network packets.
+* **Marshaling and Unmarshaling:**
+    * *What it is:* **Marshaling** is the process of converting Java object parameters into an XML format for transmission. **Unmarshaling** is converting received XML back into Java types.
+    * *Why it is used:* Computers cannot send raw Java memory structures across networks. They must be serialized into a text format (XML) first.
+    * *How it works here:* JAX-WS automatically marshals the local `double` variables into XML elements inside the SOAP body on the client side, and unmarshals them back into native memory on the server side.
+
+
+
+
+
+
+
+
+
+
+
+
+    
+Step-by-Step Execution (Same for ALL 5 Practicals)
+I will show the steps for 7.1. For 7.2–7.5 just replace folder name, package name, and port number.
+
+Step 1 — Create folder and save files
+For 7.1, your folder must look exactly like this:
+C:\WebServices\Assignment7.1\
+    src\
+        org\
+            me\
+                calculator\
+                    CalculatorWS.java
+                    Publisher.java
+    CalculatorClient.java
+
+Step 2 — Open Command Prompt and go to folder
+cd C:\WebServices\Assignment7.1
+
+Step 3 — Compile the service files
+javac -d . src\org\me\calculator\CalculatorWS.java src\org\me\calculator\Publisher.java
+This creates the compiled .class files inside org\me\calculator\ folder.
+
+Step 4 — Start the Publisher (Terminal 1 — keep this open)
+java org.me.calculator.Publisher
+You should see:
+Starting Calculator Web Service at: http://localhost:8080/ws/calculator
+Server is running! Do not close this terminal.
+WSDL available at: http://localhost:8080/ws/calculator?wsdl
+Verify it works by opening browser and visiting:
+http://localhost:8080/ws/calculator?wsdl
+You should see an XML page — that means the service is running.
+
+Step 5 — Run wsimport to generate stub (Terminal 2 — new window)
+cd C:\WebServices\Assignment7.1
+wsimport -keep -s . http://localhost:8080/ws/calculator?wsdl
+This auto-generates the CalculatorWS_Service.java and related files inside org\me\calculator\ folder. These are needed by the client.
+
+Step 6 — Compile the client (Terminal 3 — new window)
+javac -cp . CalculatorClient.java
+
+Step 7 — Run the client
+java -cp . CalculatorClient
+
+
+You will see:
+Enter first number: 15
+Enter second number: 4
+Choose operation: 1-Add  2-Subtract  3-Multiply  4-Divide
+Enter choice: 1
+Web Service Response: Addition of 15.0 and 4.0 = 19.0

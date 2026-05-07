@@ -1,0 +1,216 @@
+ ##1.1) Addition Server: Implement multi-threaded client/server Process 
+communication using RMI for Addition of Numbers on 2 different machines. 
+---
+
+## 1. ADD COMMENTS TO THE CODE
+
+### **File 1: ServerIntf.java (The Interface)**
+This file acts as a "contract" or blueprint. It tells both the client and server which methods are available[cite: 4].
+
+```java
+// Import the RMI library so we can use Remote features
+import java.rmi.*;
+
+// Define an interface called ServerIntf that 'extends' Remote
+// This means this interface can be used for remote communication[cite: 4]
+public interface ServerIntf extends Remote {
+    
+    // Define a method named Addition that takes two numbers (double)
+    // It 'throws RemoteException' because network calls can fail[cite: 4]
+    public double Addition(double num1, double num2) throws RemoteException;
+    
+} // Closing brace for the interface
+```
+
+---
+
+### **File 2: ServerImpl.java (The Implementation)**
+This file contains the actual logic (the math) for the methods defined in the interface[cite: 3].
+
+```java
+// Import RMI libraries for general functions
+import java.rmi.*;
+// Import the server library to allow this object to live on a network[cite: 3]
+import java.rmi.server.*;
+
+// This class 'extends' UnicastRemoteObject to make it a network-accessible object
+// It 'implements' ServerIntf to prove it has the Addition logic[cite: 3]
+public class ServerImpl extends UnicastRemoteObject implements ServerIntf {
+    
+    // The 'constructor' - a special method that runs when the object is created
+    // It must throw RemoteException because it uses network features[cite: 3]
+    public ServerImpl() throws RemoteException {
+        // 'super()' calls the setup logic from UnicastRemoteObject[cite: 3]
+        super();
+    }
+
+    // The actual math logic for the Addition method
+    // It takes two numbers, adds them, and returns the total[cite: 3]
+    public double Addition(double num1, double num2) throws RemoteException {
+        return num1 + num2;
+    }
+    
+} // Closing brace for the class
+```
+
+---
+
+### **File 3: Server.java (The Program Starter)**
+This file starts the server and registers the "Addition" service so the client can find it[cite: 1].
+
+```java
+// Import RMI library to handle naming and binding
+import java.rmi.*;
+// Import the registry library to start the RMI lookup service[cite: 1]
+import java.rmi.registry.LocateRegistry;
+
+// Define the main Server class
+public class Server {
+    // The main method where the program starts execution[cite: 1]
+    public static void main(String[] args) {
+        // 'try' block: attempt to run the code, and catch errors if they happen
+        try {
+            // Start the RMI registry on port 1099
+            // This is like a phonebook where the server lists its service[cite: 1]
+            LocateRegistry.createRegistry(1099);
+
+            // Create an instance (a copy) of our math logic class[cite: 1]
+            ServerImpl obj = new ServerImpl();
+
+            // Register the object in the phonebook under the name "Server"
+            // 'localhost' means the server is running on this same machine[cite: 1]
+            Naming.rebind("rmi://localhost/Server", obj);
+
+            // Print a message to the screen so we know it worked[cite: 1]
+            System.out.println("Server has started .");
+        }
+        // 'catch' block: if a network error occurs, print it here[cite: 1]
+        catch(Exception e) {
+            System.out.println(e);
+        }
+    } // Closing brace for main method
+} // Closing brace for Server class
+```
+
+---
+
+### **File 4: Client.java (The User Interface)**
+This file runs on the user's side. It asks for numbers and sends them to the server[cite: 2].
+
+```java
+// Import RMI library to look up the remote server
+import java.rmi.*;
+// Import Scanner to allow the user to type numbers in the terminal[cite: 2]
+import java.util.Scanner;
+
+// Define the main Client class
+public class Client {
+    // The main method where the client program starts[cite: 2]
+    public static void main(String[] args) {
+        // 'try' block to handle potential network errors
+        try {
+            // Create a Scanner object to read user input from the keyboard[cite: 2]
+            Scanner sc = new Scanner(System.in);
+            
+            // Ask the user for the first number
+            System.out.println("Enter num1 : ");
+            // Save the typed number into the variable 'num1'[cite: 2]
+            double num1 = sc.nextDouble();
+            
+            // Ask the user for the second number
+            System.out.println("Enter num2 : ");
+            // Save the typed number into the variable 'num2'[cite: 2]
+            double num2 = sc.nextDouble();
+
+            // Look up the "Server" service in the RMI registry (the phonebook)
+            // It searches on 'localhost' (this machine)[cite: 2]
+            ServerIntf obj = (ServerIntf) Naming.lookup("rmi://localhost/Server");
+
+            // Call the 'Addition' method on the remote object and get the result[cite: 2]
+            double result = obj.Addition(num1, num2);
+
+            // Print the final answer to the screen[cite: 2]
+            System.out.println(result);
+        }
+        // 'catch' block: print the error if the server cannot be reached[cite: 2]
+        catch(Exception e) {
+            System.out.println(e);
+        }
+    } // Closing brace for main method
+} // Closing brace for Client class
+```
+
+---
+
+## 2. STEP-BY-STEP EXECUTION GUIDE (Linux)
+
+Follow these steps exactly to run the program on a Linux terminal.
+
+### **Step 1: Save the Files**
+Create a new folder and save the code into four separate files. **Filenames are case-sensitive.**
+1. `ServerIntf.java`
+2. `ServerImpl.java`
+3. `Server.java`
+4. `Client.java`
+
+### **Step 2: Compile the Code**
+Open a terminal in that folder and run this command to compile all files at once:
+```bash
+javac *.java
+```
+*Verification:* If no errors appear, you will see new `.class` files in your folder.
+
+### **Step 3: Run the Server**
+In the same terminal (or a new one), start the server:
+```bash
+java Server
+```
+*Expected Output:* `Server has started .`[cite: 1]
+**Note:** Leave this terminal running. Do not close it.
+
+### **Step 4: Run the Client**
+Open a **second terminal window** and run the client:
+```bash
+java Client
+```
+
+### **Step 5: Verify the Result**
+The client terminal will prompt you:
+1. `Enter num1 : ` (Type `10` and press Enter)
+2. `Enter num2 : ` (Type `20` and press Enter)
+3. *Expected Output:* `30.0`[cite: 2]
+
+---
+
+## 3. IMPORTANT THINGS TO TAKE CARE OF ON LINUX
+
+*   **File Naming:** In Java, the name of the `public class` must match the filename exactly. For example, `public class Server` **must** be saved as `Server.java`. Linux is case-sensitive, so `server.java` (lowercase) will not work.
+*   **Check Java Installation:** Type `java -version` and `javac -version` in the terminal. If you get a "command not found" error, Java is not installed or the path is not set.
+*   **Finding the IP Address:** If you are using two different machines (one for Server, one for Client), you cannot use `localhost`.
+    *   On the Server machine, type: `hostname -I`
+    *   In the code (`Server.java` and `Client.java`), replace `localhost` with that specific IP address (e.g., `rmi://192.168.1.5/Server`).
+*   **Port Conflicts:** RMI uses port **1099**[cite: 1]. If the terminal says "Port already in use," it means a previous run of the server is still stuck in the background. Kill it using:
+    ```bash
+    fuser -k 1099/tcp
+    ```
+*   **Firewalls:** If running across two machines, the Linux firewall might block port 1099. You can temporarily disable it (if you have sudo rights) using `sudo ufw disable`.
+
+---
+
+## 4. CONCEPTS AND THEORY (For Viva)
+
+### **What is RMI?**
+**RMI (Remote Method Invocation)** is a technology that allows a program on one computer (the Client) to call and run a method on a program sitting on another computer (the Server) as if it were local.
+
+### **Key Components in this Practical:**
+*   **Client-Server Architecture:** The **Server** provides a service (Addition), and the **Client** requests that service[cite: 1, 2].
+*   **Remote Interface (`ServerIntf`):** This is a shared agreement. It lists what methods the server is willing to perform for the client[cite: 4].
+*   **UnicastRemoteObject:** By extending this in `ServerImpl`, we make the object "exportable," meaning it can listen for incoming network requests[cite: 3].
+*   **rmiregistry:** Think of this as a directory service. The Server "binds" (registers) its name here so the Client can "lookup" where the server is located[cite: 1, 2].
+*   **Stub and Skeleton:** 
+    *   **Stub:** A "proxy" object on the Client side that pretends to be the server.
+    *   **Skeleton:** An entity on the Server side that receives the request from the stub and passes it to the actual server object.
+*   **Marshalling and Unmarshalling:**
+    *   **Marshalling:** Converting the numbers (data) into a format that can be sent over the network.
+    *   **Unmarshalling:** The receiver converting that network data back into Java numbers.
+```

@@ -1,0 +1,215 @@
+Yes, the provided code is **perfectly matching** for the given problem statement. It correctly implements the logic where a root process initializes an array, distributes chunks of it to worker processes using a Scatter operation, calculates local products (intermediate multiplications), and then uses a Reduce operation to find the final result.
+
+---
+
+### 13 2.2 Problem Statement
+**Design a distributed application using MPI for computation where root process has an array of elements equal to the size of processors which is divided to the worker processes which calculates and displays the intermediate multiplication calculated at different processors.**
+
+---
+
+### 1. Annotated Code (Line-by-Line)
+
+Save this file exactly as: `MPIMultiplication.java`
+
+```java
+// Import the MPJ Express library which provides the MPI (Message Passing Interface) functions
+import mpi.*;
+
+// Start the definition of the class named MPIMultiplication
+public class MPIMultiplication {
+    
+    // The main entry point where the program starts running
+    // String[] args allows passing parameters from the command line
+    // throws Exception tells the computer that if something goes wrong, it should report it
+    public static void main(String[] args) throws Exception {
+
+        // Start the MPI environment; this must be the very first MPI command in any program
+        // It sets up the communication between different processors
+        MPI.Init(args);
+
+        // Get the "Rank" or unique ID number of the current process
+        // In a group of $N$ processes, the IDs go from $0$ to $N - 1$
+        int rank = MPI.COMM_WORLD.Rank();
+
+        // Get the total "Size" or number of processes that were launched for this task
+        int size = MPI.COMM_WORLD.Size();
+
+        // Each individual process will be responsible for 4 numbers from the main array
+        int unitsize = 4;
+
+        // Designate process 0 as the "Root" or the boss process that manages the data
+        int root = 0;
+
+        // Calculate the total size of the main array: (elements per process) * (total processes)
+        int total_elements = unitsize * size;
+
+        // Create an array (a list of numbers) to hold all the data before it is sent out
+        int send_buffer[] = new int[total_elements];
+
+        // Only the boss process (Rank 0) should prepare the data
+        if (rank == root) {
+            // Print a message to show the root is starting the work
+            System.out.println("Root (Processor " + rank + ") initializing array of size " + total_elements + "...");
+
+            // Use a loop to fill the array with simple numbers
+            // The modulo operator (%) makes the numbers cycle through 1, 2, and 3
+            for (int i = 0; i < total_elements; i++) {
+                send_buffer[i] = (i % 3) + 1;
+            }
+
+            // Print the full array to the screen so we can see what the input looks like
+            System.out.print("Array: [ ");
+            for (int i = 0; i < total_elements; i++) {
+                System.out.print(send_buffer[i] + " ");
+            }
+            // End the line after printing all array elements
+            System.out.println("]");
+        } // This closing brace ends the root-only section
+
+        // Create a smaller array to hold the 4 elements that THIS specific process will receive
+        int receive_buffer[] = new int[unitsize];
+
+        // The Scatter command takes the big array from the root and gives a chunk to every process
+        // send_buffer: the big array; unitsize: size of chunk; MPI.INT: type of data
+        // receive_buffer: where this process puts its chunk; root: who is sending
+        MPI.COMM_WORLD.Scatter(
+            send_buffer,    0, unitsize, MPI.INT,
+            receive_buffer, 0, unitsize, MPI.INT,
+            root
+        );
+
+        // Every process (including the root) now calculates the multiplication of its own 4 numbers
+        // We start with 1 because any number multiplied by 1 stays the same
+        int local_prod = 1;
+        for (int i = 0; i < unitsize; i++) {
+            // Multiply the current local total by the next number in the received chunk
+            local_prod *= receive_buffer[i];
+        }
+
+        // Each process prints its own ID and the result of its local calculation
+        System.out.println("Processor " + rank + " calculated intermediate multiplication: " + local_prod);
+
+        // MPI Reduce requires data to be in an array, so we wrap our result in a small array of size 2
+        int local_prod_arr[] = new int[2];
+        local_prod_arr[0] = local_prod;
+
+        // Create an array to hold the final grand product (only used by the root process)
+        int final_prod[] = new int[2];
+
+        // The Reduce command collects local products from everyone and combines them
+        // MPI.PROD tells it to MULTIPLY all the incoming local products together
+        // The final result is stored in the final_prod array on the root process
+        MPI.COMM_WORLD.Reduce(
+            local_prod_arr, 0,
+            final_prod,     0,
+            1, MPI.INT,
+            MPI.PROD,           
+            root
+        );
+
+        // Only the boss process (Rank 0) prints the final final answer to the screen
+        if (rank == root) {
+            System.out.println("Root (Processor " + rank + ") calculated final product: " + final_prod[0]);
+        } // End of root-only printing
+
+        // Clean up and shut down the MPI environment; this must be the last MPI command
+        MPI.Finalize();
+        
+    } // End of the main method
+} // End of the class
+```
+
+---
+
+### 2. Step-by-Step Execution Guide
+
+#### Case A: Running on a Single Machine
+1.  **Open Terminal**: Open the command line on your Linux machine.
+2.  **Create the File**: Type `nano MPIMultiplication.java` and paste the code above. Press `Ctrl+O` to save and `Ctrl+X` to exit.
+3.  **Compile**: Run this command to turn the Java code into a runnable program. 
+    ```bash
+    javac -cp $MPJ_HOME/lib/mpj.jar MPIMultiplication.java
+    ```
+4.  **Run**: Execute the program using 4 processes.
+    ```bash
+    mpjrun.sh -np 4 MPIMultiplication
+    ```
+5.  **Verify**: You should see "Processor 0", "Processor 1", etc., printing their intermediate products, followed by the "Final product" from the Root.
+
+#### Case B: Running on Two Machines
+1.  **Preparation**: Ensure MPJ Express is installed on both machines. Let's call them **Machine 1** and **Machine 2**.
+2.  **IP Addresses**: Find the IP of each (e.g., Machine 1: `192.168.1.10`, Machine 2: `192.168.1.11`).
+3.  **Copy Files**: The compiled `MPIMultiplication.class` must be in the same folder on both machines.
+4.  **Create Machine File**: On Machine 1, create a file named `machines`:
+    ```text
+    192.168.1.10
+    192.168.1.11
+    ```
+5.  **Start Daemons**: On **both** machines, type:
+    ```bash
+    mpjboot
+    ```
+6.  **Run**: On Machine 1 only, run:
+    ```bash
+    mpjrun.sh -np 2 -dev niodev -machinesfile machines MPIMultiplication
+    ```
+7.  **Stop**: When done, run `mpjhalt` on both machines to stop the connection.
+
+---
+
+### 3. Important Things to Take Care of on Linux
+
+- **Filename Match**: Your file **must** be named `MPIMultiplication.java`. If the case (Capital/Small letters) doesn't match the class name inside the code, Linux will show a compilation error.
+- **Environment Variables**: The command `$MPJ_HOME` refers to where MPI is installed. If you get an error saying "mpjrun.sh not found", it means your paths are not set in the `.bashrc` file.
+- **Firewalls**: In many labs, the Linux firewall blocks the connection between two machines. If the program "hangs" (does nothing), ask the instructor to run `sudo ufw disable`.
+- **Finding IP**: Use the command `hostname -I` or `ifconfig` to find your machine's IP address.
+- **Permissions**: If the script won't run, type `chmod +x mpjrun.sh` to give it execution permission.
+- **Common Error**: "Could not find or load main class". This usually happens if you try to run the program without being in the same folder where the `.class` file is located.
+
+---
+
+### 4. Concepts and Theory
+
+#### Distributed Computing (MPI)
+- **What it is**: MPI stands for Message Passing Interface. It is a set of rules and a library that allows multiple computers to talk to each other and work on a single problem simultaneously.
+- **Purpose**: It is used to make computations faster by dividing a large task into smaller pieces and giving each piece to a different processor.
+- **In this practical**: We use **MPJ Express**, which is the Java version of MPI, to run the multiplication across different processes.
+
+#### Scatter Operation
+- **What it is**: It is a "One-to-All" communication pattern.
+- **Purpose**: To distribute data fairly among all available processes.
+- **How it works here**: The Root process has a large array of numbers. `Scatter` takes that array, cuts it into equal chunks, and sends one chunk to every process (including itself).
+
+#### Reduce Operation (MPI.PROD)
+- **What it is**: It is an "All-to-One" communication pattern.
+- **Purpose**: To collect results from all processes and combine them into a single final value.
+- **How it works here**: Each process calculates a "local product" (multiplication of its chunk). `Reduce` collects all these local products and uses the `MPI.PROD` math rule to multiply them all together into one final answer at the Root.
+
+#### Root vs. Worker Processes
+- **Definition**: In MPI, every process is equal, but we usually pick one (Rank 0) to be the "Root".
+- **Purpose**: The Root acts like a manager. It prepares the data at the start and collects the final results at the end.
+- **Worker**: The processes with Rank $1, 2, 3...$ are called workers. They just receive data, do the math, and send the result back.
+
+#### Distributed Memory
+- **Definition**: Each process in MPI has its own private memory. 
+- **Purpose**: This means Processor 1 cannot see what is inside Processor 0's variables. 
+- **In this practical**: This is why we *must* use `Scatter` and `Reduce` to move the data between them; they cannot just "share" the array variable directly.
+
+
+
+====================================================================================================================
+1. Set MPJ_HOME
+$env:MPJ_HOME="C:\mpj\mpj-v0_44"
+2. Go to Project Folder
+cd C:\MPI\2.1_MPISum
+3. Compile Java File
+javac -cp ".;$env:MPJ_HOME\lib\mpj.jar" MPISum.java
+4. Run MPI Program
+& "$env:MPJ_HOME\bin\mpjrun.bat" -np 4 MPISum
+
+
+
+instead only 3 commands 
+cd C:\MPI\2.1_MPISum
+javac -cp ".;..\mpj\lib\mpj.jar" MPISum.java
+..\mpj\bin\mpjrun.bat -np 4 MPISum

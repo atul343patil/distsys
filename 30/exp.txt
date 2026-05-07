@@ -1,0 +1,303 @@
+The provided code is **perfectly matching** for the problem statement. It implements a SOAP-based Web Service using JAX-WS (Java API for XML Web Services). It includes the service logic (`CalculatorWS.java`), a server to host it (`Publisher.java`), and a client to use it (`CalculatorClient.java`).
+
+---
+
+### 7.1 Create a Simple Calculator web service and consume that web service.
+
+### 1. ADD COMMENTS TO THE CODE
+
+#### **File 1: CalculatorWS.java** (The Service Logic)
+This file defines what the calculator actually does (add, subtract, etc.).
+
+```java
+// Declare this file belongs to the package org.me.calculator
+// This organizes the code into a specific folder-like structure
+package org.me.calculator;
+
+// Import annotations needed to define a web service
+// Annotations (starting with @) tell Java that these classes have special roles
+import javax.jws.WebService;
+import javax.jws.WebMethod;
+import javax.jws.WebParam;
+
+// @WebService marks this class as a SOAP web service
+// serviceName is the name that will appear in the WSDL (web service description)
+@WebService(serviceName = "CalculatorWS")
+public class CalculatorWS {
+
+    // @WebMethod makes this specific function available to be called over the internet
+    // operationName is the name the client will use to call this function
+    @WebMethod(operationName = "add")
+    public double add(@WebParam(name = "a") double a,
+                      @WebParam(name = "b") double b) {
+        // Return the sum of the two numbers provided by the user
+        return a + b;
+    } // End of add method
+
+    // This method handles subtraction
+    @WebMethod(operationName = "subtract")
+    public double subtract(@WebParam(name = "a") double a,
+                           @WebParam(name = "b") double b) {
+        // Return the first number minus the second number
+        return a - b;
+    } // End of subtract method
+
+    // This method handles multiplication
+    @WebMethod(operationName = "multiply")
+    public double multiply(@WebParam(name = "a") double a,
+                           @WebParam(name = "b") double b) {
+        // Return the result of multiplying the two numbers
+        return a * b;
+    } // End of multiply method
+
+    // This method handles division
+    @WebMethod(operationName = "divide")
+    public double divide(@WebParam(name = "a") double a,
+                         @WebParam(name = "b") double b) {
+        // Check if the second number is zero to avoid a math error
+        if (b == 0) {
+            return 0;
+        }
+        // Return the result of dividing the first number by the second
+        return a / b;
+    } // End of divide method
+
+} // End of CalculatorWS class
+```
+
+#### **File 2: Publisher.java** (The Server)
+This file starts a mini-server to host your calculator so others can access it.
+
+```java
+// Declare that this file belongs to the package org.me.calculator
+package org.me.calculator;
+
+// Import Endpoint — a built-in Java tool used to publish/start the web service
+import javax.xml.ws.Endpoint;
+
+public class Publisher {
+    // The main method is where the program execution begins
+    public static void main(String[] args) {
+        // The URL address where the web service will be hosted on your computer
+        // "localhost" means this machine; "8080" is the communication port
+        String url = "http://localhost:8080/ws/calculator";
+        
+        // Print a message to the console so the user knows the server is starting
+        System.out.println("Starting Calculator Web Service at: " + url);
+        
+        // This line actually starts the service
+        // It takes the URL and a new instance of our CalculatorWS class
+        Endpoint.publish(url, new CalculatorWS());
+        
+        // Inform the user that the server is now active
+        System.out.println("Server is running! Do not close this terminal.");
+        
+        // Inform the user where they can see the technical description (WSDL) of the service
+        System.out.println("WSDL available at: " + url + "?wsdl");
+    } // End of main method
+} // End of Publisher class
+```
+
+#### **File 3: CalculatorClient.java** (The Consumer)
+This file acts as the user interface to interact with the web service.
+
+```java
+// Import the generated stub classes
+// These are "helper" files created by a tool (wsimport) that allow the client to talk to the server
+import org.me.calculator.CalculatorWS;
+import org.me.calculator.CalculatorWS_Service;
+
+// Import Scanner to take input from the user's keyboard
+import java.util.Scanner;
+
+public class CalculatorClient {
+    // The main method starts the client application
+    public static void main(String[] args) {
+        // "try" is used to wrap code that might cause an error (like connection issues)
+        try {
+            // Create the service object which points to the web service
+            CalculatorWS_Service service = new CalculatorWS_Service();
+
+            // Get the "port" — this is the actual object we use to call the remote functions
+            CalculatorWS port = service.getCalculatorWSPort();
+
+            // Create a scanner object to read what the user types
+            Scanner scanner = new Scanner(System.in);
+
+            // Prompt user for the first number
+            System.out.print("Enter first number: ");
+            double a = scanner.nextDouble();
+
+            // Prompt user for the second number
+            System.out.print("Enter second number: ");
+            double b = scanner.nextDouble();
+
+            // Show the user a menu of operations
+            System.out.println("Choose operation: 1-Add  2-Subtract  3-Multiply  4-Divide");
+            System.out.print("Enter choice: ");
+            int choice = scanner.nextInt();
+
+            // Variables to store the answer and the name of the operation performed
+            double result = 0;
+            String operation = "";
+
+            // The switch statement directs the program to the correct math function
+            switch (choice) {
+                case 1:
+                    // Call the remote 'add' method on the server
+                    result    = port.add(a, b);
+                    operation = "Addition";
+                    break;
+                case 2:
+                    // Call the remote 'subtract' method
+                    result    = port.subtract(a, b);
+                    operation = "Subtraction";
+                    break;
+                case 3:
+                    // Call the remote 'multiply' method
+                    result    = port.multiply(a, b);
+                    operation = "Multiplication";
+                    break;
+                case 4:
+                    // Call the remote 'divide' method
+                    result    = port.divide(a, b);
+                    operation = "Division";
+                    break;
+                default:
+                    // Handle cases where the user types something other than 1-4
+                    System.out.println("Invalid choice");
+                    return;
+            }
+
+            // Display the final answer received from the web service server
+            System.out.println("Web Service Response: " + operation + " of " + a + " and " + b + " = " + result);
+
+            // Close the scanner to free up system resources
+            scanner.close();
+
+        } catch (Exception e) {
+            // If any error occurs (like the server being offline), print the error details
+            e.printStackTrace();
+        }
+    } // End of main method
+} // End of CalculatorClient class
+```
+
+---
+
+### 2. STEP-BY-STEP EXECUTION GUIDE (For Linux Lab Machines)
+
+
+#### **Scenario A: Running on a Single Machine**
+
+1.  **Create Folders:**
+    Open a terminal and create the package structure:
+    `mkdir -p org/me/calculator`
+2.  **Save Files:**
+    Save the code into the following exact filenames:
+    - `org/me/calculator/CalculatorWS.java`
+    - `org/me/calculator/Publisher.java`
+    - `CalculatorClient.java` (save this in the main folder, *outside* the `org` folder).
+3.  **Compile the Server side:**
+    `javac org/me/calculator/CalculatorWS.java org/me/calculator/Publisher.java`
+4.  **Start the Server:**
+    `java org.me.calculator.Publisher`
+    *(Keep this terminal open!)*
+5.  **Generate Client Stubs (New Terminal):**
+    Open a second terminal and run:
+    `wsimport -keep -p org.me.calculator http://localhost:8080/ws/calculator?wsdl`
+6.  **Compile the Client:**
+    `javac CalculatorClient.java`
+7.  **Run the Client:**
+    `java CalculatorClient`
+
+#### **Scenario B: Running on Two Machines**
+
+**Machine 1 (Server - IP: 192.168.1.10):**
+1.  **Change Code:** In `Publisher.java`, change `localhost` to the Server's IP:
+    `String url = "http://192.168.1.10:8080/ws/calculator";`
+2.  **Compile and Run:**
+    `javac org/me/calculator/CalculatorWS.java org/me/calculator/Publisher.java`
+    `java org.me.calculator.Publisher`
+
+**Machine 2 (Client):**
+1.  **Generate Stubs:** Use the Server's IP in the command:
+    `wsimport -keep -p org.me.calculator http://192.168.1.10:8080/ws/calculator?wsdl`
+2.  **Compile and Run:**
+    `javac CalculatorClient.java`
+    `java CalculatorClient`
+
+---
+
+### 3. IMPORTANT THINGS TO TAKE CARE OF ON LINUX
+
+-   **File Naming:** Java is case-sensitive. `Publisher.java` must be exactly as named in the `public class Publisher` line.
+-   **Check Java Installation:** Type `java -version` and `javac -version`. If not found, you cannot run the code.
+-   **Finding IP Address:** Type `hostname -I` or `ifconfig` in the Linux terminal.
+-   **Firewalls:** If Machine 2 cannot connect to Machine 1, the firewall might be blocking port 8080. Use `sudo ufw disable` (if permitted) or ask the lab assistant to open port 8080.
+-   **The `wsimport` tool:** This tool is included with the JDK. If it says "command not found," you may need to navigate to the Java `bin` directory.
+-   **Terminal usage:** Do not close the Server terminal. If you do, the "Web Service" dies, and the Client will show a "Connection Refused" error.
+
+---
+
+### 4. CONCEPTS AND THEORY (For Viva)
+
+-   **Web Service:** A piece of software that makes itself available over the internet and uses a standardized XML messaging system. It allows different applications to talk to each other regardless of platform.
+-   **Client-Server Architecture:** A system where one program (the Server) provides a service, and another program (the Client) requests and consumes that service.
+-   **SOAP (Simple Object Access Protocol):** The "language" used for communication. It sends data in XML format.
+-   **WSDL (Web Services Description Language):** An XML file that acts as a manual for the web service. It tells the client what methods are available (like `add` or `subtract`) and what data types they need.
+-   **Endpoint:** The specific URL (`http://...`) where the web service is "listening" for requests.
+-   **wsimport:** A tool that reads the WSDL and automatically creates Java "stub" classes. These stubs handle the complex task of converting Java calls into XML messages and vice versa.
+-   **Annotations (@WebService, @WebMethod):** Special markers in Java code that tell the compiler to treat a regular class as a Web Service. This is part of the **JAX-WS** standard.
+
+
+
+Step-by-Step Execution (Same for ALL 5 Practicals)
+I will show the steps for 7.1. For 7.2–7.5 just replace folder name, package name, and port number.
+
+Step 1 — Create folder and save files
+For 7.1, your folder must look exactly like this:
+C:\WebServices\Assignment7.1\
+    src\
+        org\
+            me\
+                calculator\
+                    CalculatorWS.java
+                    Publisher.java
+    CalculatorClient.java
+
+Step 2 — Open Command Prompt and go to folder
+cd C:\WebServices\Assignment7.1
+
+Step 3 — Compile the service files
+javac -d . src\org\me\calculator\CalculatorWS.java src\org\me\calculator\Publisher.java
+This creates the compiled .class files inside org\me\calculator\ folder.
+
+Step 4 — Start the Publisher (Terminal 1 — keep this open)
+java org.me.calculator.Publisher
+You should see:
+Starting Calculator Web Service at: http://localhost:8080/ws/calculator
+Server is running! Do not close this terminal.
+WSDL available at: http://localhost:8080/ws/calculator?wsdl
+Verify it works by opening browser and visiting:
+http://localhost:8080/ws/calculator?wsdl
+You should see an XML page — that means the service is running.
+
+Step 5 — Run wsimport to generate stub (Terminal 2 — new window)
+cd C:\WebServices\Assignment7.1
+wsimport -keep -s . http://localhost:8080/ws/calculator?wsdl
+This auto-generates the CalculatorWS_Service.java and related files inside org\me\calculator\ folder. These are needed by the client.
+
+Step 6 — Compile the client (Terminal 3 — new window)
+javac -cp . CalculatorClient.java
+
+Step 7 — Run the client
+java -cp . CalculatorClient
+
+
+You will see:
+Enter first number: 15
+Enter second number: 4
+Choose operation: 1-Add  2-Subtract  3-Multiply  4-Divide
+Enter choice: 1
+Web Service Response: Addition of 15.0 and 4.0 = 19.0

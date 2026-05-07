@@ -1,0 +1,205 @@
+The provided code is **perfectly matching** for the given problem statement. It correctly defines an RMI interface, implements the logic to append "Hello" to a name, and provides a server and client to facilitate the communication.
+
+---
+
+### 0. Problem Statement 1.8
+**1.8) Echo Server: Implement multi-threaded client/server Process communication using RMI for Printing Name Appending to Hello on 2 different machines.**
+
+---
+
+### 1. ADD COMMENTS TO THE CODE
+
+#### **File 1: ServerIntf.java**
+This file acts as a "contract" or a "menu" that tells both the client and the server what functions they can use.
+
+```java
+// Import the RMI library to allow network communication
+import java.rmi.*;
+
+// Define an interface called ServerIntf that extends 'Remote'
+// This tells Java that the methods in this file can be called from another computer
+public interface ServerIntf extends Remote {
+    
+    // Declare a method named 'Echo' that takes a piece of text (String) called 'name'
+    // It returns a String as the result
+    // 'throws RemoteException' is required because network communication can fail
+    public String Echo(String name) throws RemoteException;
+    
+} // End of the interface
+```
+
+#### **File 2: ServerImpl.java**
+This file is the "brain" of the server where the actual work happens.
+
+```java
+// Import the RMI library
+import java.rmi.*;
+// Import server-side RMI tools
+import java.rmi.server.*;
+
+// This class implements the interface we created and extends 'UnicastRemoteObject'
+// This makes the class a remote object that stays alive to listen for requests
+public class ServerImpl extends UnicastRemoteObject implements ServerIntf {
+
+    // The constructor method which runs when the object is created
+    // It calls 'super()' to set up the internal RMI networking parts
+    public ServerImpl() throws RemoteException {
+        super();
+    }
+
+    // This is the actual logic for the 'Echo' method
+    // It takes the name provided by the client and adds "Hello " in front of it
+    public String Echo(String name) throws RemoteException {
+        // Return the greeting back to the client
+        return "Hello " + name;
+    }
+    
+} // End of the class
+```
+
+#### **File 3: Server.java**
+This file is the "starter" program that turns on the server and makes it visible to others.
+
+```java
+// Import the RMI library
+import java.rmi.*;
+// Import the tool that helps manage the RMI phonebook (registry)
+import java.rmi.registry.LocateRegistry;
+
+// The main Server class
+public class Server {
+    // The starting point of the server program
+    public static void main(String[] args){
+        // 'try' is used to catch any errors that might happen during startup
+        try{
+            // Start the RMI registry (the phonebook) on port 1099
+            // This allows the client to find the server on the network
+            LocateRegistry.createRegistry(1099);
+
+            // Create an instance of the logic class (the brain)
+            ServerImpl obj = new ServerImpl();
+            
+            // Give this service a name ("Server") and register it at the local address
+            // 'rebind' makes the service available to clients
+            Naming.rebind("rmi://localhost/Server", obj);
+            
+            // Print a message to the console so we know the server is ready
+            System.out.println("Server has started .");
+        }
+        // If something goes wrong (like a blocked port), the error is caught here
+        catch(Exception e){
+            // Print the error details to the screen
+            System.out.println(e);
+        }
+    }
+} // End of the class
+```
+
+#### **File 4: Client.java**
+This is the program that the user runs on their computer to talk to the server.
+
+```java
+// Import the RMI library
+import java.rmi.*;
+// Import the Scanner tool to read user input from the keyboard
+import java.util.Scanner;
+
+// The main Client class
+public class Client {
+    // The starting point of the client program
+    public static void main(String[] args) {
+        // 'try' handles potential network errors
+        try {
+            // Create a Scanner object to listen to what the user types
+            Scanner sc = new Scanner(System.in);
+
+            // Ask the user to enter their name
+            System.out.println("Enter your name : ");
+            // Read the name entered by the user
+            String name = sc.nextLine();
+
+            // Look up the "Server" service on the network
+            // 'localhost' must be changed to the Server's IP address for 2-machine setup
+            ServerIntf obj = (ServerIntf) Naming.lookup("rmi://localhost/Server");
+
+            // Call the 'Echo' method that actually runs on the Server computer
+            // The server sends back "Hello " + name
+            String result = obj.Echo(name);
+
+            // Print the result received from the server
+            System.out.println(result);
+
+        } 
+        // If the server isn't running or the connection fails, catch the error
+        catch (Exception e) {
+            // Print the error details
+            System.out.println(e);
+        }
+    }
+} // End of the class
+```
+
+---
+
+### 2. STEP-BY-STEP EXECUTION GUIDE (For Linux Lab Machines)
+
+#### **Scenario A: Running on a Single Machine**
+1.  **Save the Files:** Save all 4 files (`ServerIntf.java`, `ServerImpl.java`, `Server.java`, `Client.java`) in one folder.
+2.  **Compile:** Open a terminal in that folder and type:
+    `javac *.java`
+3.  **Start Server:** In the same terminal, type:
+    `java Server`
+    *(Wait for "Server has started .")*
+4.  **Start Client:** Open a **new terminal window**, go to the same folder, and type:
+    `java Client`
+5.  **Test:** Enter your name when prompted.
+
+---
+
+#### **Scenario B: Running on 2 Different Machines**
+
+**Machine 1 (The Server)**
+1.  **Find the IP Address:** Open a terminal and type:
+    `ifconfig` or `ip addr`
+    Look for an address like `192.168.1.10`. This is your **Server IP**.
+2.  **Save & Compile:** Save the 4 files and run:
+    `javac *.java`
+3.  **Run Server:** `java Server`
+
+**Machine 2 (The Client)**
+1.  **Edit the Code:** Open `Client.java`. Find this line:
+    `ServerIntf obj = (ServerIntf) Naming.lookup("rmi://localhost/Server");`
+    Change `localhost` to the **Server IP** you found earlier.
+    *Example:* `Naming.lookup("rmi://192.168.1.10/Server");`
+2.  **Save & Compile:** You only need `ServerIntf.java` and your edited `Client.java`. Run:
+    `javac *.java`
+3.  **Run Client:** `java Client`
+4.  **Verify:** Enter a name. The result "Hello [Your Name]" should appear on Machine 2.
+
+---
+
+### 3. IMPORTANT THINGS TO TAKE CARE OF ON LINUX LAB MACHINES
+
+* **File Names:** In Java, the filename **must** exactly match the class name. For example, `Server.java` cannot be named `server.java`. Linux is case-sensitive!
+* **Checking Java:** Type `java -version` and `javac -version` to ensure Java is installed.
+* **Firewall/Ports:** RMI uses port `1099` by default. If the machines can't connect, the firewall might be blocking them. Ask the lab assistant to check if `ufw` is active.
+* **IP Ping:** Before running the code, make sure Machine 2 can "see" Machine 1. In Machine 2's terminal, type: `ping [Server_IP_Address]`.
+* **Registry Issues:** If you get an error saying "Registry already exists," it means another student might be running an RMI program on that machine. You may need to stop their process or use a different port.
+* **Common Error:** `Connection Refused`. This usually means the server program isn't actually running yet or you typed the IP address wrong in `Client.java`.
+
+---
+
+### 4. CONCEPTS AND THEORY (For Viva)
+
+
+* **RMI (Remote Method Invocation):** A technology that allows a Java program to call a method (function) on an object located on a different computer as if it were on its own.
+* **Client-Server Architecture:** A model where the **Client** asks for a service and the **Server** provides it. In this case, the service is "Echoing" a name.
+* **Multi-threading:** RMI is multi-threaded by design. Every time a client connects, the RMI system starts a new thread to handle that request. This means multiple clients can talk to the same server at the same time without waiting for each other.
+* **Interface:** A file that defines what the server can do without showing how it does it. It acts as a bridge between the client and server.
+* **Stub and Skeleton:** These are hidden helper objects.
+    * **Stub:** Lives on the Client side and acts as a gateway to the server.
+    * **Skeleton:** Lives on the Server side and passes the client's request to the actual server logic.
+* **rmiregistry:** Think of this as a "Phonebook." The server lists its name and address here so the client can look it up and find where the server is located on the network.
+
+**Expert Guide:**
+Since you are using RMI, the most common hurdle in a lab is the connection between two different Linux machines. Would you like to know how to troubleshoot the network if your machines can't "ping" each other?

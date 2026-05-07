@@ -1,0 +1,214 @@
+The provided code is **perfectly matching** for the given problem statement. It utilizes Java Remote Method Invocation (RMI) to send two strings from a client machine to a server machine, performs a lexicographical comparison on the server, and returns the larger string to the client.
+
+---
+
+## 0. Problem Statement
+**9 1.3) Compare 2 Strings: Implement multi-threaded client/server Process communication using RMI for Comparing 2 Strings and Return lexicographically Largest string. Perform operations on 2 different machines.**
+
+---
+
+## 1. ADD COMMENTS TO THE CODE
+
+### **File: ServerIntf.java**
+This file is the interface. It acts like a contract that tells both the client and the server what methods are available for remote communication.
+
+```java
+// Import the RMI library to enable remote communication features
+import java.rmi.*;
+
+// Define an interface that extends 'Remote' to mark it as callable from another machine
+public interface ServerIntf extends Remote {
+    // Declare a method that takes two pieces of text (strings) as input
+    // It returns a piece of text (string) as the result
+    // 'throws RemoteException' is required because network calls can fail
+    public String CompareStrings(String str1, String str2) throws RemoteException;
+} // End of interface
+```
+
+### **File: ServerImpl.java**
+This file is the implementation. It contains the actual logic or "brain" that performs the string comparison.
+
+```java
+// Import the general RMI library
+import java.rmi.*;
+// Import the server-specific RMI library
+import java.rmi.server.*;
+
+// This class implements the interface and extends UnicastRemoteObject to stay active on the network
+public class ServerImpl extends UnicastRemoteObject implements ServerIntf {
+
+    // The constructor is a special method that runs when the server starts
+    // It must throw RemoteException because setting up network communication can fail
+    public ServerImpl() throws RemoteException {
+        // 'super()' calls the setup code inside the parent class (UnicastRemoteObject)
+        super();
+    } // End of constructor
+
+    // This is the actual logic to compare the two strings
+    public String CompareStrings(String str1, String str2) throws RemoteException {
+        // Compare the first string to the second string
+        // If the result is greater than 0, it means the first string is lexicographically larger
+        if(str1.compareTo(str2) > 0)
+            // Return the first string back to the client
+            return str1;
+        // Otherwise, if the second string is larger or they are equal
+        else
+            // Return the second string back to the client
+            return str2;
+    } // End of method
+} // End of class
+```
+
+### **File: Server.java**
+This file is the main program that runs on the server machine to start the service and wait for clients.
+
+```java
+// Import the RMI library
+import java.rmi.*;
+// Import the registry library to help start the RMI directory service
+import java.rmi.registry.LocateRegistry;
+
+// Define the main Server class
+public class Server {
+    // The main entry point where the server program begins execution
+    public static void main(String[] args){
+        // 'try' is used to catch any errors that might occur during network setup
+        try{
+            // Start the RMI registry on port 1099 so clients can find the server
+            LocateRegistry.createRegistry(1099);
+
+            // Create an instance of the logic class we wrote in ServerImpl
+            ServerImpl obj = new ServerImpl();
+            
+            // Register this object in the RMI registry under the name "Server"
+            // "localhost" refers to the current machine
+            Naming.rebind("rmi://localhost/Server", obj);
+            
+            // Print a message to the terminal so we know the server is ready
+            System.out.println("Server has started .");
+        }
+        // If an error occurs (like the port being blocked), catch it here
+        catch(Exception e){
+            // Print the error message to the terminal
+            System.out.println(e);
+        } // End of catch block
+    } // End of main method
+} // End of class
+```
+
+### **File: Client.java**
+This file is the program that runs on the client machine. it takes input from the user and asks the server to compare the strings.
+
+```java
+// Import the RMI library
+import java.rmi.*;
+// Import the Scanner library to read what the user types on the keyboard
+import java.util.Scanner;
+
+// Define the main Client class
+public class Client {
+    // The main entry point where the client program begins execution
+    public static void main(String[] args) {
+        // 'try' handles potential connection errors between the two machines
+        try {
+            // Create a Scanner object to listen for keyboard input
+            Scanner sc = new Scanner(System.in);
+
+            // Ask the user to type the first string
+            System.out.println("Enter first string : ");
+            // Store the text typed by the user in 'str1'
+            String str1 = sc.nextLine();
+
+            // Ask the user to type the second string
+            System.out.println("Enter second string : ");
+            // Store the text typed by the user in 'str2'
+            String str2 = sc.nextLine();
+
+            // Find the server service on the network using its name "Server"
+            // "localhost" must be changed to the Server's actual IP for 2 machines
+            ServerIntf obj = (ServerIntf) Naming.lookup("rmi://localhost/Server");
+
+            // Call the 'CompareStrings' method which actually runs on the Server machine
+            // The result is sent back over the network and stored in 'result'
+            String result = obj.CompareStrings(str1, str2);
+
+            // Print the final result received from the server
+            System.out.println("Lexicographically larger string = " + result);
+
+        } 
+        // If the server cannot be found or the network fails, catch the error
+        catch (Exception e) {
+            // Print the error message to the terminal
+            System.out.println(e);
+        } // End of catch block
+    } // End of main method
+} // End of class
+```
+
+---
+
+## 2. STEP-BY-STEP EXECUTION GUIDE (For Linux Lab Machines)
+
+### **Scenario A: Running on a Single Machine (Testing)**
+1.  Open a terminal and create a folder for your project.
+2.  Save all 4 files (`ServerIntf.java`, `ServerImpl.java`, `Server.java`, `Client.java`) in this folder.
+3.  **Compile all files:**
+    `javac *.java`
+4.  **Run the Server:**
+    `java Server`
+    (Leave this terminal open. It should say "Server has started .")
+5.  **Run the Client:**
+    Open a **second terminal**, go to the same folder, and type:
+    `java Client`
+6.  **Verify:** Enter two strings (e.g., "apple" and "banana"). The client should display "banana".
+
+---
+
+### **Scenario B: Running on 2 Different Machines**
+
+**1. Machine 1 (The Server):**
+* Find the IP Address: Open a terminal and type `hostname -I`. (e.g., `192.168.1.5`).
+* Save all 4 files.
+* Compile: `javac *.java`
+* Run: `java Server`
+
+**2. Machine 2 (The Client):**
+* Open `Client.java` and find the line:
+  `ServerIntf obj = (ServerIntf) Naming.lookup("rmi://localhost/Server");`
+* **Change "localhost" to the Server's IP address:**
+  `ServerIntf obj = (ServerIntf) Naming.lookup("rmi://192.168.1.5/Server");`
+* Save only `ServerIntf.java` and your edited `Client.java` on this machine.
+* Compile: `javac *.java`
+* Run: `java Client`
+
+**3. Verify:**
+The interaction happens on Machine 2, while the logic is processed on Machine 1.
+
+---
+
+## 3. IMPORTANT THINGS TO TAKE CARE OF ON LINUX LAB MACHINES
+
+* **File Naming:** In Java, the filename **must** exactly match the class name inside (e.g., `Server.java` for `public class Server`). Linux is case-sensitive!
+* **Check Java Installation:** Type `java -version` and `javac -version`. If they are not found, the lab has not installed Java.
+* **IP Address:** Use `hostname -I` or `ifconfig` to find the IP. Ensure both machines are on the same local network.
+* **Firewall:** If the client gets a "Connection Refused" error, the Linux firewall might be blocking port 1099. You can try disabling it with `sudo ufw disable` (if permitted).
+* **Port 1099:** This is the default RMI port. If another student is already running an RMI server on that same machine, you will get an "Address already in use" error.
+* **Stopping programs:** Use `Ctrl + C` in the terminal to stop the Server or Client.
+
+---
+
+## 4. CONCEPTS AND THEORY (For Viva/Examiner Questions)
+
+
+* **RMI (Remote Method Invocation):** This is a technology that allows an object on one machine to call a method on an object located on another machine as if it were local.
+* **Client-Server Architecture:** A model where the **Client** asks for a service (string comparison) and the **Server** provides it.
+* **Multi-threading:** RMI is inherently multi-threaded. Every time a client connects, the RMI system automatically starts a new thread to handle that request. This allows the server to handle multiple clients at the same time.
+* **Interface (`ServerIntf`):** A shared file between client and server that defines what methods are available. The client uses it as a menu.
+* **Stub and Skeleton:**
+    * **Stub:** A "proxy" on the client side that packages the data and sends it over the network.
+    * **Skeleton:** A "proxy" on the server side that receives the data and passes it to the actual server logic.
+* **rmiregistry:** A directory service (like a phonebook). The server registers its location here, and the client looks it up to find out where the server is on the network.
+* **Lexicographical Comparison:** This is a dictionary-style comparison. For example, "banana" is larger than "apple" because 'b' comes after 'a' in the alphabet.
+
+**Expert Guide:**
+Since you are comparing strings lexicographically, would you like to know how the server handles comparison if one string is just a longer version of the other, like "apple" and "apples"?

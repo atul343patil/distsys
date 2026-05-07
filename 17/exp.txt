@@ -1,0 +1,295 @@
+Yes, the provided code is perfectly matching for the given problem statement. [cite_start]It utilizes the CORBA architecture to perform a string case-conversion operation (to uppercase) across a network using object brokering[cite: 1, 2].
+
+---
+
+### **0. Problem Statement**
+**17 3.2 Develop Changing Case of String to Uppercasing distributed application using CORBA to demonstrate object brokering. Perform operations on 2 different machines.**
+
+---
+
+### **1. ADD COMMENTS TO THE CODE**
+
+Since your code imports `UpperModule.*`, you first need an **IDL (Interface Definition Language)** file to generate that package. I have provided it below followed by your Java files.
+
+#### **File: Upper.idl**
+```idl
+// This file defines the 'contract' between the client and server
+module UpperModule {
+    // Interface defines the methods available to the client
+    interface Upper {
+        // Defines a function that takes a string and returns a string
+        string to_uppercase(in string str);
+    };
+};
+```
+
+#### **File: UpperImpl.java**
+```java
+[cite_start]// Import the generated code that handles CORBA communication [cite: 2]
+import UpperModule.*;
+
+[cite_start]// This class contains the actual logic for the uppercase service [cite: 2]
+[cite_start]// It 'extends' (borrows from) UpperPOA to handle CORBA networking [cite: 2]
+class UpperImpl extends UpperPOA {
+
+    [cite_start]// This is the actual function that converts the string [cite: 2]
+    [cite_start]// 'public' means it can be accessed by other parts of the program [cite: 2]
+    public String to_uppercase(String str) {
+        [cite_start]// Use the built-in Java tool to convert text to uppercase [cite: 2]
+        [cite_start]// Then send that result back to whoever called this function [cite: 2]
+        return str.toUpperCase();
+    [cite_start]// This brace marks the end of the to_uppercase method [cite: 2]
+    }
+[cite_start]// This brace marks the end of the UpperImpl class [cite: 2]
+}
+```
+
+#### **File: UpperServer.java**
+```java
+// Import the generated module and standard CORBA libraries
+import UpperModule.*;
+import org.omg.CORBA.*;
+import org.omg.PortableServer.*;
+import org.omg.CosNaming.*;
+
+// This class starts the server and waits for client requests
+class UpperServer {
+
+    // The main entry point where the server execution starts
+    public static void main(String args[]) {
+
+        // Try-catch block helps catch and report network errors
+        try {
+
+            // Initialize the Object Request Broker (ORB) which handles messaging
+            ORB orb = ORB.init(args, null);
+
+            // Get a reference to the RootPOA which manages server objects
+            POA rootpoa = POAHelper.narrow(
+                    orb.resolve_initial_references("RootPOA"));
+
+            // Tell the manager to start listening for requests
+            rootpoa.the_POAManager().activate();
+
+            // Create an instance of our logic class (UpperImpl)
+            UpperImpl obj = new UpperImpl();
+
+            // Register this object with the POA to make it a CORBA servant
+            org.omg.CORBA.Object ref =
+                    rootpoa.servant_to_reference(obj);
+
+            // Convert the generic reference into the 'Upper' specific type
+            Upper href = UpperHelper.narrow(ref);
+
+            // Find the NameService, which is like a phonebook for services
+            org.omg.CORBA.Object objRef =
+                    orb.resolve_initial_references("NameService");
+
+            // Prepare the phonebook tool to find or store service names
+            NamingContextExt ncRef =
+                    NamingContextExtHelper.narrow(objRef);
+
+            // Give our service the name "Upper" so clients can find it
+            ncRef.rebind(ncRef.to_name("Upper"), href);
+
+            // Print a message to the console so we know the server is ready
+            System.out.println("Server ready...");
+
+            // Keep the server running and waiting for incoming client calls
+            orb.run();
+
+        // If something goes wrong, print the error message
+        } catch (Exception e) {
+
+            System.out.println("Error: " + e);
+        // This brace ends the try-catch block
+        }
+    // This brace ends the main method
+    }
+// This brace ends the UpperServer class
+}
+```
+
+#### **File: UpperClient.java**
+```java
+[cite_start]// Import the generated module, CORBA tools, and user input tools [cite: 1]
+import UpperModule.*;
+import org.omg.CORBA.*;
+import org.omg.CosNaming.*;
+import java.util.Scanner;
+
+[cite_start]// This class represents the client application on the user's machine [cite: 1]
+class UpperClient {
+
+    [cite_start]// The main entry point where the client execution starts [cite: 1]
+    public static void main(String args[]) {
+
+        [cite_start]// Try-catch block helps catch and report network or connection errors [cite: 1]
+        try {
+
+            [cite_start]// Initialize the ORB to connect the client to the network [cite: 1]
+            ORB orb = ORB.init(args, null);
+
+            [cite_start]// Locate the NameService (the 'phonebook') on the network [cite: 1]
+            org.omg.CORBA.Object objRef =
+                    orb.resolve_initial_references("NameService");
+
+            [cite_start]// Prepare the tool to look up service names [cite: 1]
+            NamingContextExt ncRef =
+                    NamingContextExtHelper.narrow(objRef);
+
+            [cite_start]// Look up the service named "Upper" in the phonebook [cite: 1]
+            [cite_start]// and convert it into a usable 'Upper' object [cite: 1]
+            Upper obj = UpperHelper.narrow(
+                    ncRef.resolve_str("Upper"));
+
+            [cite_start]// Create a tool to read text typed by the user [cite: 1]
+            Scanner sc = new Scanner(System.in);
+
+            [cite_start]// Ask the user to type something [cite: 1]
+            System.out.print("Enter string: ");
+
+            [cite_start]// Read the string typed by the user [cite: 1]
+            String input = sc.nextLine();
+
+            [cite_start]// Call the remote function on the server and get the result [cite: 1]
+            String result = obj.to_uppercase(input);
+
+            [cite_start]// Print the uppercase string received from the server [cite: 1]
+            System.out.println("Uppercase string: " + result);
+
+        [cite_start]// If a connection error occurs, show it to the user [cite: 1]
+        } catch (Exception e) {
+
+            System.out.println("Error: " + e);
+        [cite_start]// This brace ends the try-catch block [cite: 1]
+        }
+    [cite_start]// This brace ends the main method [cite: 1]
+    }
+[cite_start]// This brace ends the UpperClient class [cite: 1]
+}
+```
+
+---
+
+### **2. STEP-BY-STEP EXECUTION GUIDE (For Linux Lab Machines)**
+
+
+#### **Preparation**
+Save the code into four files in a single folder: `Upper.idl`, `UpperImpl.java`, `UpperServer.java`, and `UpperClient.java`.
+
+#### **Option 1: Single Machine Setup**
+1.  **Generate CORBA files:** Open a terminal and type:
+    `idlj -fall Upper.idl`
+2.  **Compile all Java files:**
+    `javac *.java UpperModule/*.java`
+3.  **Start the Naming Service (The Broker):**
+    `orbd -ORBInitialPort 1050 &`
+4.  **Run the Server:**
+    `java UpperServer -ORBInitialPort 1050 -ORBInitialHost localhost`
+    *(Wait for "Server ready..." message)*
+5.  **Run the Client (In a new terminal tab):**
+    `java UpperClient -ORBInitialPort 1050 -ORBInitialHost localhost`
+6.  **Expected Output:** The client asks for a string. If you type `hello`, it prints `Uppercase string: HELLO`.
+
+---
+
+#### **Option 2: Two Machines Setup**
+Assume **Machine 1** is the Server and **Machine 2** is the Client.
+
+**Step 1: Setup Machine 1 (Server)**
+1.  Find the IP Address of Machine 1 (e.g., `192.168.1.10`).
+2.  Compile everything:
+    `idlj -fall Upper.idl`
+    `javac *.java UpperModule/*.java`
+3.  Start Naming Service:
+    `orbd -ORBInitialPort 1050 -ORBInitialHost 192.168.1.10 &`
+4.  Run Server:
+    `java UpperServer -ORBInitialPort 1050 -ORBInitialHost 192.168.1.10`
+
+**Step 2: Setup Machine 2 (Client)**
+1.  Copy all files (including the `UpperModule` folder) to Machine 2.
+2.  Compile the client:
+    `javac UpperClient.java`
+3.  Run Client (Point it to Machine 1's IP):
+    `java UpperClient -ORBInitialPort 1050 -ORBInitialHost 192.168.1.10`
+
+---
+
+### **3. IMPORTANT THINGS TO TAKE CARE OF ON LINUX**
+
+* **File Names:** Java is case-sensitive. `UpperServer.java` must match the class name `UpperServer` exactly.
+* **Checking Tools:** Type `idlj -version` or `java -version` to check if Java is installed. If not, use `sudo apt install default-jdk`.
+* **IP Address:** Use `hostname -I` or `ifconfig` in the terminal to find your Linux IP address.
+* **Firewall:** If the 2-machine setup fails, the firewall might block port 1050. Run `sudo ufw disable` to temporarily turn it off.
+* **Killing the Broker:** If you get "Port already in use," find the process ID (PID) with `ps -ef | grep orbd` and kill it with `kill -9 <PID>`.
+* **Permissions:** If you can't run a file, use `chmod +x <filename>` to give it execution permissions.
+
+---
+
+### **4. CONCEPTS AND THEORY (For Viva)**
+
+**CORBA (Common Object Request Broker Architecture)**
+* **What it is:** A middleman technology that allows different computers to talk to each other.
+* **Purpose:** To make remote objects look and act like local objects.
+* **In this practical:** It provides the environment for `UpperClient` to call the `to_uppercase` method sitting on `UpperServer`.
+
+**IDL (Interface Definition Language)**
+* **What it is:** A standard language used to define how a client and server will talk without worrying about the programming language used.
+* **Purpose:** It ensures that a C++ client could theoretically talk to this Java server.
+* **In this practical:** `Upper.idl` defines the `to_uppercase` function name and its data types.
+
+**ORB (Object Request Broker)**
+* **What it is:** The communication backbone.
+* **Purpose:** It finds the remote object, delivers the request, and brings back the result.
+* [cite_start]**In this practical:** It is initialized in both Client and Server to handle the network traffic[cite: 1].
+
+**Object Brokering (Naming Service)**
+* **What it is:** A registry service (like a phone directory).
+* **Purpose:** Servers "bind" their name in the directory so clients can "resolve" (find) them without knowing their exact location.
+* [cite_start]**In this practical:** The Server binds the name "Upper," and the Client looks up "Upper" to find the server[cite: 1].
+
+**Stub and Skeleton**
+* **What they are:** Automatically generated helper code. The **Stub** stays with the Client; the **Skeleton** stays with the Server.
+* **Purpose:** They hide the complexity of the network. The client thinks it's calling a local function; the stub handles the actual network transmission.
+* **In this practical:** These are found inside the `UpperModule` folder generated by `idlj`.
+
+**Client-Server Architecture**
+* **What it is:** A model where one program (Client) requests a service and another (Server) provides it.
+* [cite_start]**In this practical:** `UpperClient` requests a conversion, and `UpperServer` performs it[cite: 1].
+
+**Which distributive technology is this?**
+This is CORBA. Unlike RMI (which is only for Java), CORBA is designed to be language-independent. It uses an **IDL** and an **ORB** to manage communication.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+For execution 
+
+Terminal 1 → Compile
+idlj -fall UpperCase.idl
+
+javac .java UpperModule\.java
+Terminal 2 → Naming Service
+tnameserv -ORBInitialPort 1050
+Terminal 3 → Server
+java UpperServer -ORBInitialPort 1050 -ORBInitialHost localhost
+
+Expected:
+
+Server ready...
+Terminal 4 → Client
+java UpperClient -ORBInitialPort 1050 -ORBInitialHost localhost

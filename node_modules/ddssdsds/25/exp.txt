@@ -1,0 +1,228 @@
+Yes, the provided code is a **perfect match** for the problem statement. It simulates the Bully Algorithm, including the logic for processes to fail (DOWN) or recover (UP), and it prints the exact messages ([ELECTION], [OK], [COORDINATOR]) exchanged between them.
+
+---
+
+### **0. Problem Statement**
+**24 6.1 Perform Leader Election using Bully Algorithm. Also print the messages exchanged between processes.**
+
+---
+
+### **1. ADD COMMENTS TO THE CODE**
+
+#### **File: Bully.java**
+```java
+// Import the tool to work with lists of data (Arrays)
+import java.util.Arrays;
+// Import the tool to read user input from the keyboard
+import java.util.Scanner;
+
+// Define the main class named Bully. The file must be named Bully.java.
+public class Bully {
+
+    [cite_start]// A list of 'true/false' values to track if a process is running (UP) or failed (DOWN) [cite: 1]
+    static boolean[] alive;
+    [cite_start]// A variable to store how many total processes we have [cite: 1]
+    static int n;
+
+    [cite_start]// This method handles the election logic starting from process 'p' [cite: 1]
+    static void election(int p) {
+        [cite_start]// Print that process 'p' has started an election [cite: 1]
+        System.out.println("\n--> Process " + p + " initiates an ELECTION!");
+
+        [cite_start]// A flag to check if any process with a higher ID number says "I am here" [cite: 1]
+        boolean higherResponded = false;
+
+        [cite_start]// Step 1: Send [ELECTION] messages to all processes that have a higher number than 'p' [cite: 1]
+        for (int i = p + 1; i < n; i++) {
+            System.out.println("Message: Process " + p + " sends [ELECTION] to Process " + i);
+        }
+
+        [cite_start]// Step 2: Check which of those higher processes are actually running [cite: 1]
+        for (int i = p + 1; i < n; i++) {
+            [cite_start]// If process 'i' is alive, it sends back an "OK" message [cite: 1]
+            if (alive[i]) {
+                System.out.println("Message: Process " + i + " responds with [OK] to Process " + p);
+                [cite_start]// Mark that we found at least one higher process that is alive [cite: 1]
+                higherResponded = true;
+            }
+        }
+
+        [cite_start]// Step 3: If a higher process responded, that higher process now starts its own election [cite: 1]
+        if (higherResponded) {
+            for (int i = p + 1; i < n; i++) {
+                if (alive[i]) {
+                    System.out.println("Process " + i + " takes over the election...");
+                    [cite_start]// This is a 'recursive call'—the higher process starts an election from itself [cite: 1]
+                    election(i);
+                    [cite_start]// The current process 'p' stops here because a 'bully' (higher ID) took over [cite: 1]
+                    return; 
+                }
+            }
+        }
+
+        [cite_start]// Step 4: If no higher process responded, process 'p' realizes it is the biggest/strongest [cite: 1]
+        System.out.println("\n*** WINNER: Process " + p + " is the new COORDINATOR! ***");
+
+        [cite_start]// Step 5: The winner sends a [COORDINATOR] message to all other alive processes [cite: 1]
+        for (int i = 0; i < n; i++) {
+            [cite_start]// Send the message to everyone except itself, and only if they are alive [cite: 1]
+            if (i != p && alive[i]) {
+                System.out.println("Message: Process " + p + " sends [COORDINATOR] to Process " + i);
+            }
+        }
+    }
+
+    [cite_start]// This method prints the current status (UP or DOWN) of all processes [cite: 1]
+    static void showStatus() {
+        System.out.print("Status: ");
+        for (int i = 0; i < n; i++) {
+            [cite_start]// If alive[i] is true, print UP; otherwise, print DOWN [cite: 1]
+            System.out.print("P" + i + (alive[i] ? "(UP)  " : "(DOWN)  "));
+        }
+        [cite_start]// Print a new line at the end [cite: 1]
+        System.out.println();
+    }
+
+    [cite_start]// The main method where the program execution starts [cite: 1]
+    public static void main(String[] args) {
+        [cite_start]// Create a Scanner object to read what the user types [cite: 1]
+        Scanner sc = new Scanner(System.in);
+
+        [cite_start]// Ask the user for the total number of processes [cite: 1]
+        System.out.print("Enter total number of processes: ");
+        n = sc.nextInt();
+
+        [cite_start]// Create the status list and set all processes to be UP (true) initially [cite: 1]
+        alive = new boolean[n];
+        Arrays.fill(alive, true);
+
+        int choice;
+
+        [cite_start]// Display a menu to the user [cite: 1]
+        System.out.println("\n========= MENU =========");
+        System.out.println("1. UP a process: Activate a deactivated Process");
+        System.out.println("2. DOWN a process: Simulate failure of a Process");
+        System.out.println("3. ELECT leader: Starts Bully election from a process");
+        System.out.println("4. SHOW STATUS: Displays which processes are UP/DOWN");
+        System.out.println("5. EXIT");
+
+        [cite_start]// Keep running the menu until the user chooses option 5 (EXIT) [cite: 1]
+        do {
+            System.out.print("\nEnter your choice: ");
+            choice = sc.nextInt();
+
+            [cite_start]// Handle the user's menu choice [cite: 1]
+            switch (choice) {
+                case 1: // Turn a process back on
+                    System.out.print("Process to UP (0-" + (n - 1) + "): ");
+                    int upProc = sc.nextInt();
+                    alive[upProc] = true;
+                    System.out.println("Process " + upProc + " is now UP.");
+                    break;
+
+                case 2: // Turn a process off (failure simulation)
+                    System.out.print("Process to DOWN (0-" + (n - 1) + "): ");
+                    int downProc = sc.nextInt();
+                    alive[downProc] = false;
+                    System.out.println("Process " + downProc + " is now DOWN.");
+                    break;
+
+                case 3: // Start an election
+                    System.out.print("Start election from process (0-" + (n - 1) + "): ");
+                    int p = sc.nextInt();
+
+                    [cite_start]// A dead process cannot start an election [cite: 1]
+                    if (!alive[p]) {
+                        System.out.println("This Process is DOWN. It cannot start an election.");
+                    } else {
+                        [cite_start]// Call the election method [cite: 1]
+                        election(p);
+                    }
+                    break;
+
+                case 4: // Show current status
+                    showStatus();
+                    break;
+
+                case 5: // Exit program
+                    System.out.println("Exiting...");
+                    break;
+
+                default: // Handle invalid numbers
+                    System.out.println("Invalid choice. Try again.");
+            }
+
+        [cite_start]// Loop condition [cite: 1]
+        } while (choice != 5);
+        
+        [cite_start]// Close the scanner tool to save memory [cite: 1]
+        sc.close();
+    [cite_start]// End of main method [cite: 1]
+    }
+[cite_start]// End of Bully class [cite: 1]
+}
+```
+
+---
+
+### **2. STEP-BY-STEP EXECUTION GUIDE (For Linux Lab Machines)**
+
+
+#### **Scenario A: Single Machine (Simulation)**
+This code is designed as a **simulation**. It mimics multiple computers by using an array in a single program.
+1.  **Save the file:** Save the code exactly as `Bully.java`.
+2.  **Open Terminal:** Navigate to the folder where you saved the file.
+3.  **Compile the code:**
+    `javac Bully.java`
+4.  **Run the program:**
+    `java Bully`
+5.  **Follow these steps to demonstrate the logic:**
+    * Enter `5` for the number of processes.
+    * Choose option `2` (DOWN) and enter `4` (this kills the highest process).
+    * Choose option `3` (ELECT) and enter `1` (Process 1 notices the leader is gone and starts an election).
+    * **Verify Output:** You should see Process 1 sending ELECTION messages, Processes 2 and 3 responding with OK, and eventually Process 3 becoming the new Coordinator because Process 4 is DOWN.
+
+#### **Scenario B: Two Machines Setup**
+Since this specific code is a **logic simulation**, it runs as one interactive menu. To show it on two machines, you would usually need to rewrite it using network "Sockets" (where each machine runs its own program). However, if you must use this specific code to show distributed behavior:
+1.  **Machine 1 (The Observer):** Run the program as shown above.
+2.  **Machine 2 (The User):** This machine can watch the output or you can copy the code to both machines to show that the **logic** is the same. 
+*Note: In a real exam, if the examiner asks for "2 physical machines" for this specific code, explain that it is a **centralized simulator** of a distributed algorithm. If they want true networking, they would require code using `java.net.Socket`.*
+
+---
+
+### **3. IMPORTANT THINGS TO TAKE CARE OF ON LINUX**
+
+* **File Name:** You must name the file `Bully.java`. If you name it `bully.java` (lowercase), Linux will not compile it correctly.
+* **Java Check:** Type `javac -version` to ensure the Java compiler is installed.
+* **Infinite Loops:** If the program gets stuck, press `Ctrl + C` in the terminal to force it to stop.
+* **Menu Navigation:** Ensure you only type numbers when the menu asks. Typing letters will cause a "InputMismatchException" and crash the program.
+* **Logic Rule:** Remember that in the Bully algorithm, the process with the **highest ID number** that is alive is always the leader.
+
+---
+
+### **4. CONCEPTS AND THEORY (For Viva)**
+
+**Leader Election**
+* **What it is:** The process of choosing a single process to act as the "manager" or "coordinator" for a group of computers.
+* **Purpose:** In a distributed system, someone needs to coordinate tasks or manage resources to avoid chaos.
+
+**Bully Algorithm**
+* **What it is:** A specific election method where processes "bully" each other based on their ID numbers.
+* **How it works:** 1.  A process notices the leader has failed.
+    2.  It sends an **ELECTION** message to all processes with a higher ID.
+    3.  If any higher process is alive, it sends back an **OK** and takes over the election.
+    4.  If no one replies with OK, the original process wins and sends a **COORDINATOR** message to everyone else.
+* **In this practical:** The code uses the `election()` method to repeat this cycle until the highest available process is found.
+
+**Messages in Bully Algorithm**
+* **ELECTION:** Sent to announce that an election has started.
+* **OK / ANSWER:** Sent by a higher-ID process to say "I am alive, I will handle the election."
+* **COORDINATOR:** Sent by the winner to tell everyone who the new boss is.
+
+**Process ID**
+* **What it is:** A unique number (0, 1, 2...) assigned to each computer/process.
+* **Why it matters:** The Bully algorithm assumes that the process with the highest ID is the most "powerful" and should be the leader.
+
+**Distributed System Simulation**
+* **What it is:** Using one program to act like many different computers.
+* **How it works here:** The `alive` array acts like the network. Setting `alive[i] = false` is exactly like unplugging a computer from the network in a real scenario.

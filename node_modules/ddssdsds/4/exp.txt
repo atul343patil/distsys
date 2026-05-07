@@ -1,0 +1,193 @@
+The provided code is **perfectly matching** for the given problem statement. It correctly implements the Remote Method Invocation (RMI) mechanism to perform subtraction across different processes, and because Java RMI handles every incoming request in a new thread, it fulfills the "multi-threaded" requirement of the task.
+
+---
+
+### 0. Problem Statement
+**1.4) Subtract Server: Implement multi-threaded client/server Process communication using RMI for Subtract of Numbers on 2 different machines.**
+
+---
+
+### 1. ADD COMMENTS TO THE CODE
+
+#### **File: ServerIntf.java**
+This file is the "Interface." It acts as a shared agreement between the server and the client about what methods can be called.
+
+```java
+import java.rmi.*; // Import the RMI library to allow communication over a network.
+
+// Define the interface. 'extends Remote' tells Java this can be called from another machine.
+public interface ServerIntf extends Remote {
+    
+    // Declare the Subtraction method.
+    // It takes two decimal numbers (num1, num2) and returns a decimal result.
+    // 'throws RemoteException' handles potential network or connection errors.
+    public double Subtraction(double num1, double num2) throws RemoteException;
+    
+} // End of the interface.
+```
+
+#### **File: ServerImpl.java**
+This is the "Implementation" file. It contains the actual math logic for subtraction.
+
+```java
+import java.rmi.*; // Import the standard RMI library.
+import java.rmi.server.*; // Import server-specific RMI functions.
+
+// This class implements the interface and extends UnicastRemoteObject.
+// UnicastRemoteObject makes this class a 'Remote Object' that stays alive to listen for calls.
+public class ServerImpl extends UnicastRemoteObject implements ServerIntf {
+
+    // The constructor. It runs when the object is first created.
+    public ServerImpl() throws RemoteException {
+        super(); // Calls the parent class setup for RMI networking.
+    } // End of constructor.
+
+    // This is the actual subtraction logic.
+    public double Subtraction(double num1, double num2) throws RemoteException {
+        // Subtract num2 from num1 and return the result to the client.
+        return num1 - num2;
+    } // End of method.
+    
+} // End of class.
+```
+
+#### **File: Server.java**
+This is the main program on the Server machine that starts the service.
+
+```java
+import java.rmi.*; // Import RMI communication library.
+import java.rmi.registry.LocateRegistry; // Import the tool that helps start the RMI directory.
+
+public class Server {
+    // The main entry point where the server starts running.
+    public static void main(String[] args){
+        try{
+            // Start the RMI registry service on port 1099.
+            // This is like a phonebook where the server lists its name.
+            LocateRegistry.createRegistry(1099);
+
+            // Create an instance of the math logic class.
+            ServerImpl obj = new ServerImpl();
+            
+            // Bind (register) this object in the phonebook under the name "Server".
+            // "localhost" means this current machine.
+            Naming.rebind("rmi://localhost/Server", obj);
+            
+            // Print a message to show the server is ready.
+            System.out.println("Server has started .");
+        }
+        // If something goes wrong (like the port is already in use), catch the error.
+        catch(Exception e){
+            // Print the error details.
+            System.out.println(e);
+        } // End of catch block.
+    } // End of main method.
+} // End of class.
+```
+
+#### **File: Client.java**
+This is the program the user runs to enter numbers and get the result.
+
+```java
+import java.rmi.*; // Import RMI communication library.
+import java.util.Scanner; // Import a tool to read what the user types on the keyboard.
+
+public class Client {
+    // The main entry point where the client starts running.
+    public static void main(String[] args) {
+        try {
+            // Create a 'Scanner' to listen to the user's typing.
+            Scanner sc = new Scanner(System.in);
+
+            // Ask the user for the first number.
+            System.out.println("Enter num1 : ");
+            // Read the number from the user.
+            double num1 = sc.nextDouble();
+
+            // Ask the user for the second number.
+            System.out.println("Enter num2 : ");
+            // Read the number from the user.
+            double num2 = sc.nextDouble();
+
+            // Find the server in the network "phonebook".
+            // "localhost" means look on this same machine.
+            ServerIntf obj = (ServerIntf) Naming.lookup("rmi://localhost/Server");
+
+            // Call the 'Subtraction' method as if it were on this computer.
+            // The logic actually runs on the server machine.
+            double result = obj.Subtraction(num1, num2);
+
+            // Print the answer received from the server.
+            System.out.println("Result = " + result);
+
+        } 
+        // If the server isn't running or the network is down, catch the error.
+        catch (Exception e) {
+            // Print the error details.
+            System.out.println(e);
+        } // End of catch block.
+    } // End of main method.
+} // End of class.
+```
+
+---
+
+### 2. STEP-BY-STEP EXECUTION GUIDE (For Linux Lab Machines)
+
+#### **Scenario A: Running on a Single Machine (Testing)**
+1.  **Save the files:** Create a folder and save all 4 files (`ServerIntf.java`, `ServerImpl.java`, `Server.java`, `Client.java`) inside it.
+2.  **Open Terminal 1 (Compile):** Type the following and press Enter:
+    `javac *.java`
+3.  **Run Server:** In Terminal 1, type:
+    `java Server`
+    *(Wait for "Server has started.")*
+4.  **Open Terminal 2 (Client):** Type:
+    `java Client`
+5.  **Result:** Enter your numbers, and you will see the subtraction result.
+
+#### **Scenario B: Running on 2 Different Machines (Final Exam)**
+
+**Step 1: Get the Server IP Address**
+On **Machine 1 (Server)**, open a terminal and type:
+`ifconfig`
+Look for the `inet` address (e.g., `192.168.10.5`). Note this down.
+
+**Step 2: Update the Client Code**
+On **Machine 2 (Client)**, open `Client.java` and change this line:
+`ServerIntf obj = (ServerIntf) Naming.lookup("rmi://localhost/Server");`
+**to**
+`ServerIntf obj = (ServerIntf) Naming.lookup("rmi://192.168.10.5/Server");`
+*(Replace 192.168.10.5 with the actual IP you found in Step 1).*
+
+**Step 3: Compile and Run**
+1.  **Machine 1 (Server):**
+    * Compile: `javac *.java`
+    * Run: `java Server`
+2.  **Machine 2 (Client):**
+    * Compile: `javac *.java`
+    * Run: `java Client`
+
+---
+
+### 3. IMPORTANT THINGS TO TAKE CARE OF ON LINUX LAB MACHINES
+
+* **File Naming:** Java is very strict. `Server.java` is NOT the same as `server.java`. The filename must match the `public class` name exactly.
+* **Checking Java:** Before you start, check if Java is installed by typing `java -version`.
+* **The Registry:** Your code has `LocateRegistry.createRegistry(1099);`. This means you **do not** need to run the `rmiregistry` command manually. If you get an error saying "Registry already exists," it means another student is already running an RMI server on that machine.
+* **IP Address:** Ensure both machines are on the same local network. If they cannot `ping` each other, they cannot use RMI.
+* **Firewalls:** Sometimes Linux blocks port 1099. If you get a "Connection Refused" error, ask the lab assistant if the firewall is on.
+* **Case Sensitivity:** In Linux commands, everything is case-sensitive. `Java Client` will fail; it must be `java Client`.
+
+---
+
+### 4. CONCEPTS AND THEORY (For Viva/Examiner Questions)
+
+
+* **RMI (Remote Method Invocation):** It is a technology that allows a Java object on one machine to call methods on an object living on another machine as if it were a local call.
+* **Client-Server Architecture:** A model where the **Server** provides a service (in this case, subtraction math) and the **Client** requests that service.
+* **Multi-threading:** RMI is multi-threaded by default. Every time a client connects, the RMI runtime creates a new **Thread** (a mini-process) to handle that specific request. This allows the server to handle many students at once.
+* **Interface (`ServerIntf`):** It is a "contract." It tells the client what methods the server is providing without showing the actual math code.
+* **Stub and Skeleton:** These are intermediate objects. The **Stub** (on the Client side) acts as a gateway that sends the data over the network. The **Skeleton** (on the Server side) receives the data and passes it to the actual implementation class.
+* **rmiregistry:** Think of this as a "Phone Directory." The Server registers its name and IP address here so the Client can look it up and find where the server is located.
+
+**Expert Guide:** Since this is a distributed system, what would you like to know about how to handle a "Connection Refused" error if the IP addresses are set correctly but the machines still won't talk?

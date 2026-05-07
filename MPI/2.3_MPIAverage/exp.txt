@@ -1,0 +1,233 @@
+
+Yes, the code provided is a **perfect match** for the problem statement. It uses the Java Message Passing Interface (MPJ Express) to generate random numbers on a root process, distributes them using a Scatter operation, calculates local averages, and then collects those results back to the root using a Gather operation to find the final overall average.
+
+---
+
+## 14 2.3 Problem Statement
+**Design a distributed application that generate a random array of numbers on the root process (process 0) using Java Message Passing Interface (MPI), Scatter the numbers to all processes, giving each process an equal amount of numbers. Each process computes the average of their subset of the numbers. Gather all averages to the root process. The root process then computes the average of these numbers to get the final average.**
+
+---
+
+## 1. Annotated Code (Line-by-Line)
+
+Save this file exactly as: `MPIAverage.java`
+
+```java
+// Import the tool that helps generate random numbers
+import java.util.Random;
+
+// Import the MPJ Express library to use MPI functions for distributed computing
+import mpi.*;
+
+// Define the main class; this name must be exactly the same as the filename
+public class MPIAverage {
+    
+    // The main method is where the program starts running
+    // String[] args is for command line inputs; throws Exception handles errors
+    public static void main(String[] args) throws Exception {
+
+        // Start the MPI environment; this must be the first MPI call in any program
+        MPI.Init(args);
+
+        // Get the unique ID number (Rank) of this specific process
+        // Process 0 is the boss (root), others are workers
+        int rank = MPI.COMM_WORLD.Rank();
+
+        // Get the total number of processes running (the "size" of the group)
+        int size = MPI.COMM_WORLD.Size();
+
+        // Set the number of items each individual process will handle
+        int elementsPerProcess = 5;
+
+        // Calculate the size of the big array: (items per process) times (total processes)
+        int totalElements = elementsPerProcess * size;
+
+        // Designate process 0 as the root (the coordinator)
+        int root = 0;
+
+        // Create a storage list (array) for all the random numbers
+        // Only the root needs to fill this, but all need the variable name
+        double sendBuffer[] = new double[totalElements];
+
+        // This block of code only runs on the root process (ID 0)
+        if (rank == root) {
+            // Print a message to let the examiner know the root is working
+            System.out.println("Root (Processor " + rank + ") generating " + totalElements + " random numbers...");
+
+            // Create the random number generator object
+            Random rand = new Random();
+
+            // Print the start of the list to the console
+            System.out.print("Original Array: [ ");
+            
+            // Loop through the list and fill it with random numbers
+            for (int i = 0; i < totalElements; i++) {
+                // Generate a random whole number between 0 and 99
+                sendBuffer[i] = rand.nextInt(100);
+                // Print each number followed by a space
+                System.out.print(sendBuffer[i] + " ");
+            }
+            // Close the printed list and move to a new line
+            System.out.println("]\n");
+        } // End of root-only generation
+
+        // Create a smaller list to hold the specific piece of data this process gets
+        double receiveBuffer[] = new double[elementsPerProcess];
+
+        // Scatter takes the big list from root and splits it evenly
+        // Every process (including root) receives its own small chunk into receiveBuffer
+        MPI.COMM_WORLD.Scatter(
+            sendBuffer,    0, elementsPerProcess, MPI.DOUBLE, // Source: big list
+            receiveBuffer, 0, elementsPerProcess, MPI.DOUBLE, // Destination: small list
+            root                                               // Who is sending
+        );
+
+        // Every process now starts with a sum of 0
+        double localSum = 0;
+        
+        // Every process adds up the 5 numbers it just received
+        for (int i = 0; i < elementsPerProcess; i++) {
+            localSum += receiveBuffer[i];
+        }
+
+        // Calculate the average for this specific process (Sum divided by Count)
+        double localAverage = localSum / elementsPerProcess;
+
+        // Every process prints its own local average to the screen
+        System.out.println("Processor " + rank + " calculated local average: " + localAverage);
+
+        // MPI Gather needs data to be in an array, even if it is just one number
+        double localAverageArr[] = new double[1];
+        localAverageArr[0] = localAverage;
+
+        // Create an array on the root to hold all the averages collected from everyone
+        double gatherBuffer[] = new double[size];
+
+        // Gather collects the local averages from all processes and lists them in the root's buffer
+        // Unlike "Reduce", this does not do math; it just collects them into a list
+        MPI.COMM_WORLD.Gather(
+            localAverageArr, 0, 1, MPI.DOUBLE,   // What this process is sending
+            gatherBuffer,    0, 1, MPI.DOUBLE,   // Where the root collects them
+            root                                  // Who is collecting
+        );
+
+        // This block only runs on the root after all averages are collected
+        if (root == rank) {
+            System.out.println("Gathering complete at root.");
+
+            // Start with a total sum of 0 for the final calculation
+            double totalSum = 0;
+            
+            // Loop through the gathered list of averages
+            for (int i = 0; i < size; i++) {
+                // Show which process sent which average
+                System.out.println("  Average from Processor " + i + ": " + gatherBuffer[i]);
+                // Add the local average to the grand total sum
+                totalSum += gatherBuffer[i];
+            }
+
+            // Divide the sum of averages by the number of processes to get the final result
+            double finalAverage = totalSum / size;
+            
+            // Print the final result
+            System.out.println("Root (Processor " + rank + ") Final Overall Average: " + finalAverage);
+        } // End of root-only final calculation
+
+        // Shut down the MPI environment and clean up; this must be the last MPI call
+        MPI.Finalize();
+        
+    } // End of the main method
+} // End of the class
+```
+
+---
+
+## 2. Step-by-Step Execution Guide
+
+### Case A: Running on a Single Machine (Multicore)
+1.  **Open Terminal**: Navigate to the folder where you want to save the code.
+2.  **Save the file**: Type `nano MPIAverage.java`, paste the code, then press `Ctrl+O` (Save) and `Ctrl+X` (Exit).
+3.  **Compile**: Run the following command (Ensure `MPJ_HOME` is already set in your system).
+    ```bash
+    javac -cp $MPJ_HOME/lib/mpj.jar MPIAverage.java
+    ```
+4.  **Run**: Execute the program with 4 processes.
+    ```bash
+    mpjrun.sh -np 4 MPIAverage
+    ```
+
+### Case B: Running on Two Machines (Cluster Mode)
+1.  **IP Identification**: Find the IP of both machines using `hostname -I`.
+    * Machine 1 (Master): `192.168.1.10`
+    * Machine 2 (Worker): `192.168.1.11`
+2.  **File Sync**: Copy `MPIAverage.class` to the **exact same folder path** on both machines.
+3.  **Create Machine File**: On Machine 1, create a file named `machines.txt`:
+    ```text
+    192.168.1.10
+    192.168.1.11
+    ```
+4.  **Start Daemons**: Run the boot command on **both** machines:
+    ```bash
+    mpjboot
+    ```
+5.  **Run from Machine 1**:
+    ```bash
+    mpjrun.sh -np 2 -dev niodev -machinesfile machines.txt MPIAverage
+    ```
+6.  **Stop**: Run `mpjhalt` on both machines when finished.
+
+---
+
+## 3. Important Things to Take Care of on Linux
+
+* **Case Sensitivity**: Linux treats `MPIAverage` and `mpiaverage` as different. Always use the exact casing used in the code.
+* **Path Environment**: If `mpjrun.sh` says "command not found," your Linux environment doesn't know where MPJ is. You may need to run `export PATH=$PATH:$MPJ_HOME/bin`.
+* **Firewall**: If machines cannot talk to each other, the Linux firewall is likely blocking them. Use `sudo ufw disable` (with teacher permission) to turn it off temporarily.
+* **Permissions**: If you cannot run a script, use `chmod +x filename.sh` to make it executable.
+* **Common Error**: "No route to host." This means the two machines are not on the same network or the IP in your `machines.txt` is wrong.
+
+---
+
+## 4. Concepts and Theory
+
+### Distributed Computing (MPI)
+* **What it is**: A style of computing where multiple computers (nodes) work together to solve a single problem.
+* **Purpose**: It allows us to process massive amounts of data by spreading the work across many machines.
+* **In this practical**: We use MPI to calculate an average by splitting a list of numbers across multiple processes.
+
+### Scatter Operation
+* **What it is**: A "One-to-All" communication.
+* **Purpose**: To take a large dataset from one source (the root) and distribute equal portions of it to all participants.
+* **In this practical**: The root generates the random numbers and "scatters" them so every processor has a small chunk to work on.
+
+### Gather Operation
+* **What it is**: An "All-to-One" communication.
+* **Purpose**: To collect individual pieces of data from many sources and put them into a single list on one destination (the root).
+* **In this practical**: It is used to bring the "local averages" back to the root process so it can calculate the "final average."
+
+### Rank and Size
+* **Rank**: The unique ID of a process. In this program, we use `rank == 0` to identify the boss.
+* **Size**: The total number of processes. If you run with `-np 8`, the size is $8$.
+
+### Random Class
+* **What it is**: A built-in Java tool used to create numbers that aren't predictable.
+* **Why used**: In real-world distributed systems, data is often unpredictable. Using `rand.nextInt(100)` simulates real data for our math problem.
+
+
+
+====================================================================================================================
+1. Set MPJ_HOME
+$env:MPJ_HOME="C:\mpj\mpj-v0_44"
+2. Go to Project Folder
+cd C:\MPI\2.1_MPISum
+3. Compile Java File
+javac -cp ".;$env:MPJ_HOME\lib\mpj.jar" MPISum.java
+4. Run MPI Program
+& "$env:MPJ_HOME\bin\mpjrun.bat" -np 4 MPISum
+
+
+
+instead only 3 commands 
+cd C:\MPI\2.1_MPISum
+javac -cp ".;..\mpj\lib\mpj.jar" MPISum.java
+..\mpj\bin\mpjrun.bat -np 4 MPISum

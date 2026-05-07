@@ -1,0 +1,31 @@
+How to Run — Both Cases
+Case 1: Single Machine (Windows)
+cd C:\TokenRing
+javac Node.java
+javac TokenRingSimulation.java
+java TokenRingSimulation
+
+
+===============================================================================
+Case 2: Running on 2 Physical Machines (The Actual Practical)
+For your practical, you will only use Node.java. You do not run TokenRingSimulation.java.
+
+Assume you are in the lab and have two computers:
+
+Computer A has the IP Address: 192.168.1.10
+
+Computer B has the IP Address: 192.168.1.11
+
+Step 1: On Computer B (Node 1 - Does not start with token), open the terminal and type:
+
+Bash
+# java Node <myId> <myPort> <nextMachineIP> <nextPort> <hasToken> <rounds>
+java Node 1 5001 192.168.1.10 5000 false 2
+(Computer B is now waiting and listening on port 5001)
+
+Step 2: On Computer A (Node 0 - Starts with the token), open the terminal and type:
+
+Bash
+# java Node <myId> <myPort> <nextMachineIP> <nextPort> <hasToken> <rounds>
+java Node 0 5000 192.168.1.11 5001 true 2
+This will create a closed loop strictly between the two physical machines, perfectly fulfilling the problem statement requirements.

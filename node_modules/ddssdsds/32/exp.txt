@@ -1,0 +1,278 @@
+
+The code you provided for the "Hello User" task is a **perfect match** for the problem statement. It includes the service logic (`HelloWS.java`), the server to host it (`Publisher.java`), and the client to use it (`HelloClient.java`).
+
+---
+
+### 0. Problem Statement 7.3
+**7.3 Create a web service which takes User’s Name as Input and Display Hello User_Name Entered by User and Consume that web service.**
+
+---
+
+### 1. ADD COMMENTS TO THE CODE
+
+#### **File 1: HelloWS.java (The Service Logic)**
+This file defines what the web service actually does.
+
+```java
+// This line tells Java that this file lives in a folder structure called org/me/hello
+package org.me.hello;
+
+// These lines bring in special tools from Java to help create Web Services
+import javax.jws.WebService;
+import javax.jws.WebMethod;
+import javax.jws.WebParam;
+
+// This @ symbol tells Java that this class is officially a Web Service named "HelloWS"
+@WebService(serviceName = "HelloWS")
+public class HelloWS {
+
+    // This @ symbol makes this specific function ("sayHello") available for clients to call over a network
+    @WebMethod(operationName = "sayHello")
+    // This function takes a piece of text (String) called userName and gives back a String
+    public String sayHello(@WebParam(name = "userName") String userName) {
+        
+        // This checks if the user forgot to type a name or just typed spaces
+        if (userName == null || userName.trim().isEmpty()) {
+            // If the name is empty, it returns this default message
+            return "Hello, Guest!";
+        }
+        
+        // This creates a greeting by combining "Hello ", the user's name, and an exclamation mark
+        return "Hello " + userName + "!";
+        
+    } // This closing brace ends the sayHello function
+
+} // This closing brace ends the HelloWS class
+```
+
+#### **File 2: Publisher.java (The Server)**
+This file starts the "engine" that hosts your web service so others can find it.
+
+```java
+// This line ensures this file is in the same folder group as the service logic
+package org.me.hello;
+
+// This tool is used to "publish" or start the web service at a specific address
+import javax.xml.ws.Endpoint;
+
+// This class is responsible for turning the service on
+public class Publisher {
+    
+    // The "main" method is the starting point where the program begins running
+    public static void main(String[] args) {
+        
+        // This is the web address where our service will live (localhost means this computer)
+        String url = "http://localhost:8082/ws/hello";
+        
+        // This prints a message to your screen so you know the program is starting
+        System.out.println("Starting Hello User Web Service at: " + url);
+        
+        // This command actually starts the service at the address using our HelloWS logic
+        Endpoint.publish(url, new HelloWS());
+        
+        // This tells you the server is successfully running and waiting for users
+        System.out.println("Server is running! Do not close this terminal.");
+        
+        // This shows the address of the "instruction manual" (WSDL) for this service
+        System.out.println("WSDL available at: " + url + "?wsdl");
+        
+    } // This ends the main method
+
+} // This ends the Publisher class
+```
+
+#### **File 3: HelloClient.java (The Consumer)**
+This is the program the user runs to actually talk to the web service.
+
+```java
+// These lines import "Stub" files which act as the middleman between the client and the server
+import org.me.hello.HelloWS;
+import org.me.hello.HelloWS_Service;
+
+// This tool allows the program to read what you type on your keyboard
+import java.util.Scanner;
+
+// This class acts as the user interface
+public class HelloClient {
+    
+    // This is where the client program starts
+    public static void main(String[] args) {
+        
+        // "try" is used to handle situations where things might go wrong (like a network crash)
+        try {
+            
+            // This creates a connection to the Web Service using the generated middleman files
+            HelloWS_Service service = new HelloWS_Service();
+            
+            // This gets the "Port," which is the specific object we use to call the service's functions
+            HelloWS port = service.getHelloWSPort();
+
+            // This creates a new scanner to listen to your keyboard typing
+            Scanner scanner = new Scanner(System.in);
+
+            // This prints a message asking you to type your name
+            System.out.print("Enter your name: ");
+            
+            // This line waits for you to type something and hit Enter, then saves it as "name"
+            String name = scanner.nextLine();
+
+            // This line sends your name to the Web Service and waits for the "Hello" response
+            String response = port.sayHello(name);
+
+            // This prints the final greeting received back from the Web Service
+            System.out.println("Web Service Response: " + response);
+
+            // This tells the computer we are done using the keyboard scanner
+            scanner.close();
+
+        } 
+        // If an error happens, this "catch" block will print out what went wrong
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+    } // This ends the main method
+
+} // This ends the HelloClient class
+```
+
+---
+
+### 2. STEP-BY-STEP EXECUTION GUIDE (For Linux Lab Machines)
+
+
+#### **Scenario A: Running on a Single Machine**
+
+1.  **Create the Folder Structure:**
+    Open a terminal and type:
+    `mkdir -p org/me/hello`
+2.  **Save the Files:**
+    * Save `HelloWS.java` inside `org/me/hello/`
+    * Save `Publisher.java` inside `org/me/hello/`
+    * Save `HelloClient.java` in the main folder (outside the `org` folder).
+3.  **Compile the Server Code:**
+    `javac org/me/hello/HelloWS.java org/me/hello/Publisher.java`
+4.  **Start the Server:**
+    `java org.me.hello.Publisher`
+    *(Keep this terminal open! Do not close it.)*
+5.  **Generate the Middleman (Stub) Files:**
+    Open a **second terminal window** and type:
+    `wsimport -keep -p org.me.hello http://localhost:8082/ws/hello?wsdl`
+6.  **Compile the Client:**
+    `javac HelloClient.java`
+7.  **Run the Client:**
+    `java HelloClient`
+
+#### **Scenario B: Running on Two Machines**
+
+**Machine 1 (Server):**
+1.  **Find your IP address:** Type `hostname -I` in the terminal. (Let's assume it is `192.168.1.5`).
+2.  **Edit `Publisher.java`:** Change `localhost` to `192.168.1.5`.
+3.  **Compile & Run:**
+    `javac org/me/hello/HelloWS.java org/me/hello/Publisher.java`
+    `java org.me.hello.Publisher`
+
+**Machine 2 (Client):**
+1.  **Generate Stubs:** Tell the client where the server is:
+    `wsimport -keep -p org.me.hello http://192.168.1.5:8082/ws/hello?wsdl`
+2.  **Compile & Run:**
+    `javac HelloClient.java`
+    `java HelloClient`
+
+---
+
+### 3. IMPORTANT THINGS TO TAKE CARE OF ON LINUX
+
+* **Case Sensitivity:** Linux treats `HelloWS.java` and `hellows.java` as different files. Always match the class name exactly.
+* **Checking Java:** Type `java -version` and `javac -version` to ensure Java is installed.
+* **The 8082 Port:** If another student is already using port `8082`, your server will crash with an "Address already in use" error. Simply change `8082` to a different number like `8085` in `Publisher.java`.
+* **IP Address:** On Linux, `hostname -I` is the fastest way to find your machine's IP for 2-machine setups.
+* **Firewalls:** If Machine 2 cannot connect to Machine 1, the firewall might be blocking the port. You may need to ask the lab assistant to disable it or use `sudo ufw disable`.
+* **Permission Denied:** If you cannot create folders, use `chmod +777 .` to give yourself full permissions in the current directory.
+
+---
+
+### 4. CONCEPTS AND THEORY (For Viva/Examiner Questions)
+
+* **Web Service:** A software system designed to support communication between two computers over a network using a standardized format (XML). In this practical, it allows a client to "ask" for a greeting from a server.
+* **SOAP (Simple Object Access Protocol):** The "language" the client and server use to talk. It packages the user's name into an XML message so it can travel safely across the network.
+* **WSDL (Web Services Description Language):** This is the "Instruction Manual" of the web service. It tells the client exactly what functions are available (like `sayHello`) and what data they need.
+* **Endpoint:** The specific web address (URL) where the service can be reached.
+* **Stub (Client Proxy):** These are the files created by the `wsimport` command. They act as a "fake" version of the server on your client machine so the client can call methods easily without worrying about complex network code.
+* **Client-Server Architecture:** A model where one computer (Server) hosts a resource or service, and another computer (Client) requests that service.
+* **Marshalling/Unmarshalling:** The process of converting Java objects into XML (Marshalling) to send them over the network, and converting that XML back into Java (Unmarshalling) when it arrives.
+* **Annotations (@WebService):** These are "tags" in Java that give special instructions to the compiler, telling it to treat a regular class as a web-accessible service.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Step-by-Step Execution (Same for ALL 5 Practicals)
+I will show the steps for 7.1. For 7.2–7.5 just replace folder name, package name, and port number.
+
+Step 1 — Create folder and save files
+For 7.1, your folder must look exactly like this:
+C:\WebServices\Assignment7.1\
+    src\
+        org\
+            me\
+                calculator\
+                    CalculatorWS.java
+                    Publisher.java
+    CalculatorClient.java
+
+Step 2 — Open Command Prompt and go to folder
+cd C:\WebServices\Assignment7.1
+
+Step 3 — Compile the service files
+javac -d . src\org\me\calculator\CalculatorWS.java src\org\me\calculator\Publisher.java
+This creates the compiled .class files inside org\me\calculator\ folder.
+
+Step 4 — Start the Publisher (Terminal 1 — keep this open)
+java org.me.calculator.Publisher
+You should see:
+Starting Calculator Web Service at: http://localhost:8080/ws/calculator
+Server is running! Do not close this terminal.
+WSDL available at: http://localhost:8080/ws/calculator?wsdl
+Verify it works by opening browser and visiting:
+http://localhost:8080/ws/calculator?wsdl
+You should see an XML page — that means the service is running.
+
+Step 5 — Run wsimport to generate stub (Terminal 2 — new window)
+cd C:\WebServices\Assignment7.1
+wsimport -keep -s . http://localhost:8080/ws/calculator?wsdl
+This auto-generates the CalculatorWS_Service.java and related files inside org\me\calculator\ folder. These are needed by the client.
+
+Step 6 — Compile the client (Terminal 3 — new window)
+javac -cp . CalculatorClient.java
+
+Step 7 — Run the client
+java -cp . CalculatorClient
+
+
+You will see:
+Enter first number: 15
+Enter second number: 4
+Choose operation: 1-Add  2-Subtract  3-Multiply  4-Divide
+Enter choice: 1
+Web Service Response: Addition of 15.0 and 4.0 = 19.0

@@ -1,0 +1,18 @@
+How to Run — Both Cases
+Case 1: Single Machine (Windows)
+cd C:\TokenRing
+javac Node.java
+javac TokenRingSimulation.java
+java TokenRingSimulation
+
+Case 2: Two Physical Linux Machines in Lab
+Suppose Machine A has IP 192.168.1.5 and Machine B has IP 192.168.1.6.
+Copy Node.java to both machines and compile on both:
+javac Node.java
+On Machine B — start Node 1 and Node 2 first (they just listen, no token):
+java Node 1 5001 192.168.1.5 5000 false 3
+Open a second terminal on Machine B:
+java Node 2 5002 192.168.1.6 5001 false 3
+On Machine A — start Node 0 last (it holds the token):
+java Node 0 5000 192.168.1.6 5002 true 3
+The ring is: Node 0 (Machine A) → Node 1 (Machine B) → Node 2 (Machine B) → back to Node 0 (Machine A).

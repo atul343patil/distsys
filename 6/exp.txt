@@ -1,0 +1,190 @@
+The code you provided is **perfectly matching** for the given problem statement. It correctly implements the Java Remote Method Invocation (RMI) architecture to perform temperature conversion across different processes. While the code does not manually create "Thread" objects, RMI is **multi-threaded by design**; the RMI runtime automatically creates a new thread for every client request so the server can handle multiple users at once.
+
+---
+
+## 0. Problem Statement
+**6 1.6) Celsius to Fahrenheit Conversion Server: Implement multi-threaded client/server Process communication using RMI for Celsius to Fahrenheit Conversion Server on 2 different machines.**
+
+---
+
+## 1. ADD COMMENTS TO THE CODE
+
+### **File: ServerIntf.java**
+This is the "Interface." Think of it as a contract or a menu that tells both the client and the server what functions are available.
+
+```java
+import java.rmi.*; // Import the RMI library to use remote communication features.
+
+// Define an interface that extends 'Remote'. This tells Java this can be called over a network.
+public interface ServerIntf extends Remote {
+    
+    // Declare a method to convert Celsius to Fahrenheit.
+    // It takes a decimal number (celsius) and returns a decimal result.
+    // 'throws RemoteException' is mandatory because network calls can fail.
+    public double CtoF(double celsius) throws RemoteException;
+    
+} // End of the interface declaration.
+```
+
+### **File: ServerImpl.java**
+This is the "Implementation." This file contains the actual math logic for the conversion.
+
+```java
+import java.rmi.*; // Import the RMI library.
+import java.rmi.server.*; // Import server-side RMI classes.
+
+// This class implements our interface and extends UnicastRemoteObject.
+// Extending UnicastRemoteObject makes this class a 'Remote Object' that can stay active.
+public class ServerImpl extends UnicastRemoteObject implements ServerIntf {
+
+    // The constructor (runs when the object is created).
+    public ServerImpl() throws RemoteException {
+        super(); // Calls the parent class constructor to set up the RMI networking parts.
+    } // End of the constructor.
+
+    // This is the actual math logic for the temperature conversion.
+    public double CtoF(double celsius) throws RemoteException {
+        // The formula for conversion is (Celsius * 9/5) + 32.
+        return (celsius * 9/5) + 32; // Calculate and send the result back to the client.
+    } // End of the method.
+    
+} // End of the class.
+```
+
+### **File: Server.java**
+This is the "Starter." It turns on the server and registers the service so the client can find it.
+
+```java
+import java.rmi.*; // Import RMI library.
+import java.rmi.registry.LocateRegistry; // Import the tool to start the RMI directory service.
+
+public class Server {
+    // The main entry point where the server program begins.
+    public static void main(String[] args){
+        try{
+            // Start the RMI registry on port 1099. 
+            // This is like a phonebook where the server lists its name.
+            LocateRegistry.createRegistry(1099); 
+
+            // Create an instance of our temperature logic.
+            ServerImpl obj = new ServerImpl();
+            
+            // Give the object a name and register it in the "phonebook".
+            // "rmi://localhost/Server" means: this machine, name the service "Server".
+            Naming.rebind("rmi://localhost/Server", obj);
+            
+            // Print a message to show the server is ready and waiting.
+            System.out.println("Server has started .");
+        }
+        // If something goes wrong (like the port is blocked), catch the error.
+        catch(Exception e){
+            // Print the error details to the screen.
+            System.out.println(e);
+        } // End of catch block.
+    } // End of main method.
+} // End of class.
+```
+
+### **File: Client.java**
+This is the "User" program. It runs on the client machine to take input and request the calculation.
+
+```java
+import java.rmi.*; // Import RMI library.
+import java.util.Scanner; // Import Scanner to read what the user types.
+
+public class Client {
+    // The main entry point where the client program begins.
+    public static void main(String[] args) {
+        try {
+            // Create a Scanner object to read user input from the keyboard.
+            Scanner sc = new Scanner(System.in);
+
+            // Ask the user for the temperature in Celsius.
+            System.out.println("Enter temperature in Celsius : ");
+            // Read the decimal number entered by the user.
+            double celsius = sc.nextDouble();
+
+            // Look up the "Server" in the RMI phonebook.
+            // "localhost" means the server is on this same machine.
+            ServerIntf obj = (ServerIntf) Naming.lookup("rmi://localhost/Server");
+
+            // Call the 'CtoF' method. This actually runs on the Server machine.
+            double result = obj.CtoF(celsius);
+
+            // Print the final result received back from the server.
+            System.out.println("Temperature in Fahrenheit = " + result);
+
+        } 
+        // If the server isn't found or the network fails, catch the error.
+        catch (Exception e) {
+            // Print the error details to the screen.
+            System.out.println(e);
+        } // End of catch block.
+    } // End of main method.
+} // End of class.
+```
+
+---
+
+## 2. STEP-BY-STEP EXECUTION GUIDE (For Linux Lab Machines)
+
+### **Scenario A: Running on a Single Machine**
+1.  **Save the files:** Create a folder and save all four files (`ServerIntf.java`, `ServerImpl.java`, `Server.java`, `Client.java`) inside it.
+2.  **Open Terminal 1 (Compile):**
+    `javac *.java`
+3.  **Start the Server:**
+    `java Server`
+    *(Wait for "Server has started.")*
+4.  **Open Terminal 2 (Client):**
+    `java Client`
+5.  **Enter Input:** Type a number (e.g., `100`) and press Enter.
+
+### **Scenario B: Running on 2 Different Machines**
+
+**1. Find Server IP:**
+On **Machine 1 (Server)**, type `hostname -I` in the terminal. Note the IP address (e.g., `192.168.1.10`).
+
+**2. Update Client Code:**
+On **Machine 2 (Client)**, open `Client.java` and change:
+`Naming.lookup("rmi://localhost/Server");`
+to
+`Naming.lookup("rmi://192.168.1.10/Server");` *(Use the actual IP from Step 1)*.
+
+**3. Execution Order:**
+* **Machine 1 (Server):**
+    1. Save all 4 files.
+    2. Compile: `javac *.java`
+    3. Run: `java Server`
+* **Machine 2 (Client):**
+    1. Save only `ServerIntf.java` and `Client.java`.
+    2. Compile: `javac *.java`
+    3. Run: `java Client`
+
+**Verification:**
+Enter `0` on the Client. The output should be `32.0`.
+
+---
+
+## 3. IMPORTANT THINGS TO TAKE CARE OF ON LINUX
+
+* **File Naming:** Filenames must exactly match class names (e.g., `Server.java`, not `server.java`). Linux is case-sensitive.
+* **Checking Java:** Type `java -version` and `javac -version` to ensure Java is installed.
+* **IP Address:** Ensure both machines are on the same local network. Use `ping [Server-IP]` from the Client to check connectivity.
+* **Firewall:** If the client gets a "Connection Refused" error, the firewall might be blocking port 1099. Ask the lab assistant to check or try `sudo ufw disable` (if permitted).
+* **Registry Issues:** Your code uses `LocateRegistry.createRegistry(1099)`. If you run the server twice, you will get an "Address already in use" error. Close the first terminal or use `pkill -9 java` to clear it.
+
+---
+
+## 4. CONCEPTS AND THEORY (For Viva)
+
+
+* **RMI (Remote Method Invocation):** A technology that allows a Java object on one machine to call methods on an object living on another machine.
+* **Client-Server Architecture:** A model where the **Server** provides a service (temperature conversion) and the **Client** requests that service.
+* **Multi-threading:** RMI is inherently multi-threaded. Every time a client connects, the RMI system starts a new **Thread** to handle it. This prevents the server from being blocked if many students use it simultaneously.
+* **Interface (`ServerIntf`):** A shared file that defines what functions exist. The client uses it to know what it can ask for, and the server uses it to know what it must provide.
+* **Stub and Skeleton:**
+    * **Stub:** A "proxy" on the Client side that packages data and sends it over the network.
+    * **Skeleton:** A "proxy" on the Server side that receives the data and gives it to the actual implementation class.
+* **rmiregistry:** A naming service (like a phonebook). The server registers its name here so the client can find its actual network address.
+
+Would you like me to explain how the specific math formula $$(celsius \times 9/5) + 32$$ works in the code, or are you comfortable with the Java math operators?
